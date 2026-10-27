@@ -16,7 +16,7 @@ def test_auth_header_and_default_base_url(api: MockAPI) -> None:
     assert client.base_url == DEFAULT_BASE_URL
     client.status()
     req = api.last
-    assert str(req.url) == "https://api.example.com/v1/status"
+    assert str(req.url) == "https://api.adlibapi.com/v1/status"
     assert req.method == "GET"
     assert req.headers["x-api-key"] == "abc"
     assert req.headers["accept"] == "application/json"

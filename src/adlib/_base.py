@@ -28,7 +28,7 @@ from ._exceptions import (
 )
 from ._version import __version__
 
-DEFAULT_BASE_URL = "https://api.example.com"
+DEFAULT_BASE_URL = "https://api.adlibapi.com"
 # Live searches across all platforms can take a while.
 DEFAULT_TIMEOUT = 120.0
 DEFAULT_MAX_RETRIES = 2

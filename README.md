@@ -11,7 +11,7 @@ changed, and set up watchlists that report new, stopped and changed ads to your 
 Ads that disappear from a platform's library stay in the AdLib archive, with their run time,
 creative versions and permanently archived images.
 
-> **Get an API key:** [example.com](https://example.com) · Docs: [api.example.com/docs](https://api.example.com/docs)
+> **Get an API key:** [adlibapi.com](https://adlibapi.com) · Docs: [api.adlibapi.com/docs](https://api.adlibapi.com/docs)
 
 **SDKs and integrations:** [Node.js](https://github.com/adlib/adlib-node) · [MCP server](https://github.com/adlib/adlib-mcp)
 
@@ -59,7 +59,7 @@ watchlist = client.watchlists.create(
 print(watchlist["data"]["id"])
 ```
 
-Requests go to `https://api.example.com` with an `X-API-Key` header. Ids are
+Requests go to `https://api.adlibapi.com` with an `X-API-Key` header. Ids are
 `<platform>:<platform_id>` everywhere, e.g. `meta:15087023444` or `google:AR18378488041124659201`.
 
 ### Verify webhooks
@@ -130,7 +130,7 @@ client = AdLib(on_response=lambda r: print(r.url, r.billed_credits, r.rate_limit
 ```python
 AdLib(
     api_key="...",            # or ADLIB_API_KEY
-    base_url="...",           # or ADLIB_BASE_URL; default https://api.example.com (a trailing /v1 is ignored)
+    base_url="...",           # or ADLIB_BASE_URL; default https://api.adlibapi.com (a trailing /v1 is ignored)
     timeout=120.0,            # seconds, or an httpx.Timeout; live searches over all platforms can be slow
     max_retries=2,            # see Retries
     http_client=None,         # your own httpx.Client (httpx.AsyncClient for AsyncAdLib)

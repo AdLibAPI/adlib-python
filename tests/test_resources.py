@@ -203,7 +203,7 @@ def test_usage_status_platforms(api: MockAPI) -> None:
 
 def test_raw_request(api: MockAPI) -> None:
     api.client().request("get", "/v1/new", params={"a": 1})
-    assert str(api.last.url) == "https://api.example.com/v1/new?a=1"
+    assert str(api.last.url) == "https://api.adlibapi.com/v1/new?a=1"
 
 
 async def test_async_endpoints(api: MockAPI) -> None:

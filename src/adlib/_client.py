@@ -94,7 +94,7 @@ class AdLib(_ClientMixin):
 
     ``api_key`` defaults to the ``ADLIB_API_KEY`` environment variable and is sent as the
     ``X-API-Key`` header. ``base_url`` defaults to ``ADLIB_BASE_URL``, else
-    ``https://api.example.com`` (a trailing ``/v1`` is ignored).
+    ``https://api.adlibapi.com`` (a trailing ``/v1`` is ignored).
 
     Every method returns the parsed JSON as dicts (typed with :mod:`adlib.types`).
     ``429 rate_limited`` is retried for every request (honouring ``Retry-After``); 502, 503,
