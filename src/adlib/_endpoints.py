@@ -24,7 +24,8 @@ FORMATS = ("image", "video", "carousel", "text")
 DELIVERY_STATUSES = ("pending", "delivered", "failed")
 BATCH_TYPES = ("advertisers", "domains", "ads")
 EVENT_TYPES = ("started", "stopped", "changed", "discovered")
-REPORT_KINDS = ("wrong_match", "missing_match")
+REPORT_KINDS = ("wrong_match", "missing_match", "wrong_role")
+REPORT_ROLES = ("brand", "agency", "reseller", "partner")
 
 
 @dataclass(frozen=True)
@@ -197,11 +198,15 @@ def resolve_advertisers(domain: str, platform: PlatformFilter, max_per_platform:
     )
 
 
-def report_match(domain: str, kind: str, advertiser_id: Optional[str], note: Optional[str]) -> Request:
+def report_match(
+    domain: str, kind: str, advertiser_id: Optional[str], role: Optional[str], note: Optional[str]
+) -> Request:
     if _one_of("kind", kind, REPORT_KINDS) is None:
         raise ValueError("kind is required")
-    if kind == "wrong_match" and advertiser_id is None:
-        raise ValueError("advertiser_id is required for kind wrong_match")
+    if kind in ("wrong_match", "wrong_role") and advertiser_id is None:
+        raise ValueError(f"advertiser_id is required for kind {kind}")
+    if _one_of("role", role, REPORT_ROLES) is None and kind == "wrong_role":
+        raise ValueError("role is required for kind wrong_role")
     if note is not None and len(note) > 1000:
         raise ValueError("note must be at most 1000 characters")
     return Request(
@@ -212,6 +217,7 @@ def report_match(domain: str, kind: str, advertiser_id: Optional[str], note: Opt
                 "domain": _non_empty("domain", domain),
                 "kind": kind,
                 "advertiser_id": _prefixed_id("advertiser_id", advertiser_id) if advertiser_id is not None else None,
+                "role": role,
                 "note": note,
             }
         ),
@@ -288,7 +294,11 @@ def check_domain(domain: str, platform: PlatformFilter) -> Request:
 
 
 def get_company(
-    domain: str, platform: PlatformFilter, min_score: Optional[float], max_per_platform: Optional[int]
+    domain: str,
+    platform: PlatformFilter,
+    min_score: Optional[float],
+    max_per_platform: Optional[int],
+    include_related: Optional[bool],
 ) -> Request:
     return Request(
         "GET",
@@ -297,6 +307,7 @@ def get_company(
             "platform": _csv("platform", platform),
             "min_score": _number_range("min_score", min_score, 0, 1),
             "max_per_platform": _int_range("max_per_platform", max_per_platform, 1, 10),
+            "include_related": include_related,
         },
     )
 

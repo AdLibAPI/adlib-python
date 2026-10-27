@@ -20,13 +20,16 @@ class Companies(SyncResource):
         platform: PlatformFilter = None,
         min_score: Optional[float] = None,
         max_per_platform: Optional[int] = None,
+        include_related: Optional[bool] = None,
     ) -> CompanyResponse:
         """Resolves the domain (like ``advertisers.resolve``, including our manual corrections),
         keeps accounts with score >= ``min_score`` (0 to 1, default 0.75) and aggregates their
         history: totals, platforms, countries, formats, weekly launches and the longest-running
-        ads. Accounts below the threshold are listed as ``candidates``. ``max_per_platform`` 1 to
-        10, default 5. Costs one resolve plus one stats call."""
-        return cast(CompanyResponse, self._request(E.get_company(domain, platform, min_score, max_per_platform)))
+        ads. Accounts of agencies, resellers and partners are listed under ``related`` and left
+        out of the totals unless ``include_related=True``. Accounts below the threshold are listed
+        as ``candidates``. ``max_per_platform`` 1 to 10, default 5. Costs one resolve plus one
+        stats call."""
+        return cast(CompanyResponse, self._request(E.get_company(domain, platform, min_score, max_per_platform, include_related)))
 
 
 class AsyncCompanies(AsyncResource):
@@ -39,10 +42,13 @@ class AsyncCompanies(AsyncResource):
         platform: PlatformFilter = None,
         min_score: Optional[float] = None,
         max_per_platform: Optional[int] = None,
+        include_related: Optional[bool] = None,
     ) -> CompanyResponse:
         """Resolves the domain (like ``advertisers.resolve``, including our manual corrections),
         keeps accounts with score >= ``min_score`` (0 to 1, default 0.75) and aggregates their
         history: totals, platforms, countries, formats, weekly launches and the longest-running
-        ads. Accounts below the threshold are listed as ``candidates``. ``max_per_platform`` 1 to
-        10, default 5. Costs one resolve plus one stats call."""
-        return cast(CompanyResponse, await self._request(E.get_company(domain, platform, min_score, max_per_platform)))
+        ads. Accounts of agencies, resellers and partners are listed under ``related`` and left
+        out of the totals unless ``include_related=True``. Accounts below the threshold are listed
+        as ``candidates``. ``max_per_platform`` 1 to 10, default 5. Costs one resolve plus one
+        stats call."""
+        return cast(CompanyResponse, await self._request(E.get_company(domain, platform, min_score, max_per_platform, include_related)))

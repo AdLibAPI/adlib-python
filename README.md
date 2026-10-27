@@ -186,10 +186,12 @@ client.advertisers.timeline("meta:15087023444", date_from="2026-01-01")
 # resolve for everyone and show up as match_reason "manual".
 client.advertisers.report_match(
     "nike.com",
-    kind="wrong_match",  # or "missing_match" (advertiser_id optional)
+    kind="wrong_match",  # or "missing_match" (advertiser_id and role optional)
     advertiser_id="google:AR18378488041124659201",
-    note="agency account, not the brand",
+    note="not this brand",
 )
+# The account belongs to the domain but has the wrong role (advertiser_id and role required)
+client.advertisers.report_match("nike.com", kind="wrong_role", advertiser_id="meta:42", role="agency")
 client.advertisers.list_reports()  # your reports and how we resolved them
 ```
 
@@ -200,10 +202,14 @@ client.advertisers.list_reports()  # your reports and how we resolved them
 company = client.companies.get("audi.de")["data"]
 client.companies.get("audi.de", platform=["meta", "google"], min_score=0.75, max_per_platform=5)
 print(company["name"], company["stats"]["total_ads"], [(p["platform"], p["accounts"], p["active_ads"]) for p in company["platforms"] or []])
+print(company["related"])     # agencies, resellers and partners running ads for the domain
 print(company["candidates"])  # accounts below min_score, not part of the totals
+client.companies.get("audi.de", include_related=True)  # count related in platforms and stats
 ```
 
-Costs one resolve plus one stats call. `stats["advertiser_id"]` is the domain.
+`accounts` holds the company's own accounts (`role` brand or unknown); every resolved advertiser has
+a `role` and a `role_source` (manual or inferred). Costs one resolve plus one stats call.
+`stats["advertiser_id"]` is the domain.
 
 ### Domains
 

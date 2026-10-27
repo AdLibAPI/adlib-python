@@ -102,6 +102,7 @@ def test_resolve_reports() -> None:
     api = MockAPI(
         json_response({"data": {"id": 7, "kind": "wrong_match", "status": "open"}}, 201),
         json_response({"data": {"id": 8}}, 201),
+        json_response({"data": {"id": 9}}, 201),
         json_response({"data": []}),
     )
     client = api.client()
@@ -113,6 +114,7 @@ def test_resolve_reports() -> None:
     )
     assert created["data"]["id"] == 7
     client.advertisers.report_match("audi.de", kind="missing_match")
+    client.advertisers.report_match("audi.de", kind="wrong_role", advertiser_id="meta:42", role="agency")
     client.advertisers.list_reports()
     r = api.requests
     assert body(r[0]) == {
@@ -122,7 +124,9 @@ def test_resolve_reports() -> None:
         "note": "agency account, not the brand",
     }
     assert body(r[1]) == {"domain": "audi.de", "kind": "missing_match"}
+    assert body(r[2]) == {"domain": "audi.de", "kind": "wrong_role", "advertiser_id": "meta:42", "role": "agency"}
     assert calls(api) == [
+        "POST /v1/advertisers/resolve/reports",
         "POST /v1/advertisers/resolve/reports",
         "POST /v1/advertisers/resolve/reports",
         "GET /v1/advertisers/resolve/reports",
@@ -135,11 +139,13 @@ def test_companies() -> None:
     assert client.companies.get("audi.de")["data"]["domain"] == "audi.de"
     client.companies.get("audi.de", platform=["meta", "google"], min_score=0.5, max_per_platform=10)
     client.companies.get("audi.de", min_score=0)
+    client.companies.get("audi.de", include_related=True)
     r = api.requests
-    assert calls(api) == ["GET /v1/companies/audi.de"] * 3
+    assert calls(api) == ["GET /v1/companies/audi.de"] * 4
     assert params(r[0]) == {}
     assert params(r[1]) == {"platform": "meta,google", "min_score": "0.5", "max_per_platform": "10"}
     assert params(r[2]) == {"min_score": "0"}
+    assert params(r[3]) == {"include_related": "true"}
 
 
 def test_domains(api: MockAPI) -> None:

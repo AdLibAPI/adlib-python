@@ -128,6 +128,9 @@ def test_arguments_validated_before_sending(api: MockAPI) -> None:
         lambda: client.companies.get("audi.de", max_per_platform=11),
         lambda: client.advertisers.report_match("audi.de", kind="wrong_match"),
         lambda: client.advertisers.report_match("audi.de", kind="bogus"),  # type: ignore[arg-type]
+        lambda: client.advertisers.report_match("audi.de", kind="wrong_role", role="agency"),
+        lambda: client.advertisers.report_match("audi.de", kind="wrong_role", advertiser_id="meta:1"),
+        lambda: client.advertisers.report_match("audi.de", kind="missing_match", role="unknown"),  # type: ignore[arg-type]
         lambda: client.advertisers.report_match("audi.de", kind="missing_match", advertiser_id="audi"),
         lambda: client.advertisers.report_match("audi.de", kind="missing_match", note="x" * 1001),
     ]

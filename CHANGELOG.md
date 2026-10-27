@@ -13,6 +13,8 @@ All notable changes to this package are listed here. The format follows
 - `advertisers.report_match(...)` and `advertisers.list_reports()` for
   `/v1/advertisers/resolve/reports`.
 - `political` search filter, `Ad["political"]` and `AdvertiserStats["political_ads"]`.
+- `role` and `role_source` on resolved advertisers, `Company["related"]`, `include_related` on
+  `companies.get`, and `kind="wrong_role"` with `role` on `advertisers.report_match`.
 - `match_reason` `"manual"` on resolved advertisers, `Plan["history_days"]`, and the
   `history_limit` error code (403, `PermissionDeniedError`).
 

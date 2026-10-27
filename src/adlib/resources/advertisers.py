@@ -11,6 +11,7 @@ from ..types import (
     EventList,
     EventType,
     ReportKind,
+    ReportRole,
     ResolveReportResponse,
     ResolveReportsResponse,
     ResolveResponse,
@@ -34,14 +35,22 @@ class Advertisers(SyncResource):
         return cast(ResolveResponse, self._request(E.resolve_advertisers(domain, platform, max_per_platform)))
 
     def report_match(
-        self, domain: str, *, kind: ReportKind, advertiser_id: Optional[str] = None, note: Optional[str] = None
+        self,
+        domain: str,
+        *,
+        kind: ReportKind,
+        advertiser_id: Optional[str] = None,
+        role: Optional[ReportRole] = None,
+        note: Optional[str] = None,
     ) -> ResolveReportResponse:
         """Reports a wrong or missing resolve match. ``kind="wrong_match"``: ``advertiser_id``
         (``<platform>:<id>``, required) does not belong to the domain. ``kind="missing_match"``:
-        the domain's account is missing (``advertiser_id`` if you know it). ``note`` up to 1000
+        the domain's account is missing (``advertiser_id`` and ``role`` if you know them).
+        ``kind="wrong_role"``: the account belongs to the domain but has the wrong role, e.g. an
+        agency shown as the brand (``advertiser_id`` and ``role`` required). ``note`` up to 1000
         characters. We review reports; accepted ones change the resolve for everyone. Up to 50
         per day, free. Not retried on 5xx, so it is never sent twice."""
-        return cast(ResolveReportResponse, self._request(E.report_match(domain, kind, advertiser_id, note)))
+        return cast(ResolveReportResponse, self._request(E.report_match(domain, kind, advertiser_id, role, note)))
 
     def list_reports(self) -> ResolveReportsResponse:
         """Your last 100 resolve reports and how we resolved them, newest first. Free."""
@@ -108,14 +117,22 @@ class AsyncAdvertisers(AsyncResource):
         return cast(ResolveResponse, await self._request(E.resolve_advertisers(domain, platform, max_per_platform)))
 
     async def report_match(
-        self, domain: str, *, kind: ReportKind, advertiser_id: Optional[str] = None, note: Optional[str] = None
+        self,
+        domain: str,
+        *,
+        kind: ReportKind,
+        advertiser_id: Optional[str] = None,
+        role: Optional[ReportRole] = None,
+        note: Optional[str] = None,
     ) -> ResolveReportResponse:
         """Reports a wrong or missing resolve match. ``kind="wrong_match"``: ``advertiser_id``
         (``<platform>:<id>``, required) does not belong to the domain. ``kind="missing_match"``:
-        the domain's account is missing (``advertiser_id`` if you know it). ``note`` up to 1000
+        the domain's account is missing (``advertiser_id`` and ``role`` if you know them).
+        ``kind="wrong_role"``: the account belongs to the domain but has the wrong role, e.g. an
+        agency shown as the brand (``advertiser_id`` and ``role`` required). ``note`` up to 1000
         characters. We review reports; accepted ones change the resolve for everyone. Up to 50
         per day, free. Not retried on 5xx, so it is never sent twice."""
-        return cast(ResolveReportResponse, await self._request(E.report_match(domain, kind, advertiser_id, note)))
+        return cast(ResolveReportResponse, await self._request(E.report_match(domain, kind, advertiser_id, role, note)))
 
     async def list_reports(self) -> ResolveReportsResponse:
         """Your last 100 resolve reports and how we resolved them, newest first. Free."""

@@ -49,7 +49,9 @@ __all__ = [
     "WeekCount",
     "AdvertiserStats",
     "AdvertiserStatsResponse",
+    "AdvertiserRole",
     "ReportKind",
+    "ReportRole",
     "ReportStatus",
     "ResolveReport",
     "ResolveReportResponse",
@@ -103,7 +105,9 @@ EventType = Literal["started", "stopped", "changed", "discovered"]
 JobStatus = Literal["queued", "running", "done", "failed"]
 DeliveryStatus = Literal["pending", "delivered", "failed"]
 BatchType = Literal["advertisers", "domains", "ads"]
-ReportKind = Literal["wrong_match", "missing_match"]
+AdvertiserRole = Literal["brand", "agency", "reseller", "partner", "unknown"]
+ReportKind = Literal["wrong_match", "missing_match", "wrong_role"]
+ReportRole = Literal["brand", "agency", "reseller", "partner"]
 ReportStatus = Literal["open", "accepted", "rejected"]
 
 # Optional keys live in a total=False base class; the class itself lists the required keys.
@@ -231,6 +235,11 @@ class ResolvedAdvertiser(Advertiser):
     score: float
     match_reason: Literal["domain", "name", "history", "manual"]
     """``manual`` = confirmed by us (or from a customer report we accepted)."""
+    role: AdvertiserRole
+    """The account's relation to the domain: the brand itself, or an agency, reseller (dealer,
+    importer) or partner running ads for it."""
+    role_source: Literal["manual", "inferred"]
+    """``manual`` = set by us; ``inferred`` = from the account name."""
 
 
 class PlatformFailure(TypedDict):
@@ -363,6 +372,8 @@ class ResolveReport(TypedDict):
     domain: str
     advertiser_id: Optional[str]
     kind: ReportKind
+    role: Optional[ReportRole]
+    """wrong_role / missing_match: the role the account should have."""
     note: Optional[str]
     status: ReportStatus
     resolution: Optional[str]
@@ -395,12 +406,16 @@ class Company(_CompanyOpt):
     name: str
     """Name of the most confident account."""
     accounts: Optional[List[ResolvedAdvertiser]]
-    """Accounts with score >= min_score."""
+    """The company's own accounts (role brand or unknown) with score >= min_score."""
+    related: Optional[List[ResolvedAdvertiser]]
+    """Agencies, resellers and partners running ads for the domain; not in platforms and stats
+    unless ``include_related``."""
     candidates: Optional[List[ResolvedAdvertiser]]
     """Possible accounts below min_score; report wrong ones with ``advertisers.report_match``."""
     platforms: Optional[List[CompanyPlatform]]
     stats: AdvertiserStats
-    """Combined history of all accounts (``advertiser_id`` is the domain)."""
+    """Combined history of the accounts, plus related with ``include_related`` (``advertiser_id``
+    is the domain)."""
 
 
 class CompanyResponse(TypedDict):
