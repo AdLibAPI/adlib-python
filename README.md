@@ -13,7 +13,7 @@ creative versions and permanently archived images.
 
 > **Get an API key:** [adlibapi.com](https://adlibapi.com) · Docs: [api.adlibapi.com/docs](https://api.adlibapi.com/docs)
 
-**SDKs and integrations:** [Node.js](https://github.com/adlib/adlib-node) · [MCP server](https://github.com/adlib/adlib-mcp)
+**SDKs and integrations:** [Node.js](https://github.com/AdLibAPI/adlib-node) · [MCP server](https://www.npmjs.com/package/adlib-mcp)
 
 - Sync (`AdLib`) and async (`AsyncAdLib`) clients with the same methods
 - Every public `/v1` endpoint, with `TypedDict` types for every response
