@@ -150,7 +150,7 @@ Every method returns the parsed JSON as dicts, typed with the `TypedDict`s in `a
 ### Search
 
 ```python
-client.search(q="running shoes", platform=["meta", "tiktok"], country="DE")
+client.search(q="running shoes", platform=["meta", "tiktok"], country="US")
 client.search(domain="nike.com", status="active", format="video")
 client.search(advertiser="Nike", date_from="2026-01-01", date_to="2026-04-01")
 # Only political or issue ads (Meta labels them; False excludes them)
