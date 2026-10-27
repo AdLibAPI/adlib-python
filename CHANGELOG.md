@@ -6,6 +6,22 @@ All notable changes to this package are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `companies.get(domain, ...)` for `GET /v1/companies/{domain}`: all ad accounts of a domain
+  across platforms with combined stats, plus candidates below `min_score`. Sync and async.
+- `advertisers.report_match(...)` and `advertisers.list_reports()` for
+  `/v1/advertisers/resolve/reports`.
+- `political` search filter, `Ad["political"]` and `AdvertiserStats["political_ads"]`.
+- `match_reason` `"manual"` on resolved advertisers, `Plan["history_days"]`, and the
+  `history_limit` error code (403, `PermissionDeniedError`).
+
+### Changed
+
+- `Watchlist["interval_seconds"]` is now `interval_hours`; watchlists also have
+  `advertiser_count`. `watchlists.list()` returns them without `advertisers` entries; use
+  `watchlists.get(id)`.
+
 ## [0.1.0] - 2026-10-26
 
 ### Added

@@ -153,6 +153,8 @@ Every method returns the parsed JSON as dicts, typed with the `TypedDict`s in `a
 client.search(q="running shoes", platform=["meta", "tiktok"], country="DE")
 client.search(domain="nike.com", status="active", format="video")
 client.search(advertiser="Nike", date_from="2026-01-01", date_to="2026-04-01")
+# Only political or issue ads (Meta labels them; False excludes them)
+client.search(q="election", political=True)
 # Our archive, including ads gone from the platforms; longest-running first
 client.search(advertiser="meta:15087023444", source="history", sort="days_running")
 ```
@@ -179,7 +181,29 @@ client.advertisers.ads("meta:15087023444", source="history", status="inactive")
 client.advertisers.changes("meta:15087023444", since="2026-10-01", types=["started", "stopped"])
 client.advertisers.stats("meta:15087023444")   # by status/format/country/language, winners
 client.advertisers.timeline("meta:15087023444", date_from="2026-01-01")
+
+# A wrong or missing resolve match? Report it (free, up to 50 per day). Accepted reports fix the
+# resolve for everyone and show up as match_reason "manual".
+client.advertisers.report_match(
+    "nike.com",
+    kind="wrong_match",  # or "missing_match" (advertiser_id optional)
+    advertiser_id="google:AR18378488041124659201",
+    note="agency account, not the brand",
+)
+client.advertisers.list_reports()  # your reports and how we resolved them
 ```
+
+### Companies
+
+```python
+# All ad accounts of a domain across platforms, with combined stats
+company = client.companies.get("audi.de")["data"]
+client.companies.get("audi.de", platform=["meta", "google"], min_score=0.75, max_per_platform=5)
+print(company["name"], company["stats"]["total_ads"], [(p["platform"], p["accounts"], p["active_ads"]) for p in company["platforms"] or []])
+print(company["candidates"])  # accounts below min_score, not part of the totals
+```
+
+Costs one resolve plus one stats call. `stats["advertiser_id"]` is the domain.
 
 ### Domains
 
@@ -203,8 +227,8 @@ result = client.batch.get(job["data"]["job_id"])  # status and paginated items
 ### Watchlists
 
 ```python
-client.watchlists.list()
-client.watchlists.get(watchlist_id)
+client.watchlists.list()               # advertiser_count per watchlist; advertisers is empty here
+client.watchlists.get(watchlist_id)    # incl. the crawl status of each advertiser
 client.watchlists.add_advertisers(watchlist_id, ["google:AR18378488041124659201"])
 client.watchlists.remove_advertiser(watchlist_id, "google:AR18378488041124659201")
 client.watchlists.delete(watchlist_id)
@@ -268,7 +292,7 @@ extends `AdLibError`, which has `message`, `status_code`, `code`, `request_id`, 
 | `ValidationError`          | 400 or 422 (`code == "unsupported"`: the platform cannot do this query or filter) |
 | `AuthenticationError`      | 401: key missing or wrong                                            |
 | `InsufficientCreditsError` | 402: no credits left                                                 |
-| `PermissionDeniedError`    | 403: key disabled                                                    |
+| `PermissionDeniedError`    | 403: key disabled, or `history_limit`: the ad is older than your plan's archive window (free 90 days, starter 365, growth and up unlimited) |
 | `NotFoundError`            | 404: unknown id. Try `source="history"` or `advertisers.resolve`     |
 | `RateLimitError`           | 429 `rate_limited`. `retry_after` holds the wait in seconds          |
 | `QuotaExceededError`       | 429 `quota_exceeded`: monthly credits used up (subclass of `RateLimitError`) |

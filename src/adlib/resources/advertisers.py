@@ -4,20 +4,48 @@ from typing import Optional, Sequence, cast
 
 from .. import _endpoints as E
 from .._endpoints import DateLike, PlatformFilter
-from ..types import AdList, AdvertiserResponse, AdvertiserStatsResponse, EventList, EventType, ResolveResponse, Sort, Source, StatusFilter
+from ..types import (
+    AdList,
+    AdvertiserResponse,
+    AdvertiserStatsResponse,
+    EventList,
+    EventType,
+    ReportKind,
+    ResolveReportResponse,
+    ResolveReportsResponse,
+    ResolveResponse,
+    Sort,
+    Source,
+    StatusFilter,
+)
 from ._base import AsyncResource, SyncResource
 
 __all__ = ["Advertisers", "AsyncAdvertisers"]
 
 
 class Advertisers(SyncResource):
-    """Advertisers: resolve a domain, profiles, ads, changes, stats and timelines."""
+    """Advertisers: resolve a domain (and report wrong matches), profiles, ads, changes, stats and
+    timelines."""
 
     def resolve(self, domain: str, *, platform: PlatformFilter = None, max_per_platform: Optional[int] = None) -> ResolveResponse:
         """A brand's advertiser ids on Meta, Google, TikTok, LinkedIn, Pinterest and X from its
         domain, each with a confidence ``score`` and ``match_reason``. ``max_per_platform`` 1 to
         10, default 3."""
         return cast(ResolveResponse, self._request(E.resolve_advertisers(domain, platform, max_per_platform)))
+
+    def report_match(
+        self, domain: str, *, kind: ReportKind, advertiser_id: Optional[str] = None, note: Optional[str] = None
+    ) -> ResolveReportResponse:
+        """Reports a wrong or missing resolve match. ``kind="wrong_match"``: ``advertiser_id``
+        (``<platform>:<id>``, required) does not belong to the domain. ``kind="missing_match"``:
+        the domain's account is missing (``advertiser_id`` if you know it). ``note`` up to 1000
+        characters. We review reports; accepted ones change the resolve for everyone. Up to 50
+        per day, free. Not retried on 5xx, so it is never sent twice."""
+        return cast(ResolveReportResponse, self._request(E.report_match(domain, kind, advertiser_id, note)))
+
+    def list_reports(self) -> ResolveReportsResponse:
+        """Your last 100 resolve reports and how we resolved them, newest first. Free."""
+        return cast(ResolveReportsResponse, self._request(E.list_reports()))
 
     def get(self, id: str, *, refresh: Optional[bool] = None) -> AdvertiserResponse:
         """An advertiser incl. active ads and ads known in the archive. ``refresh=True`` crawls the
@@ -78,6 +106,20 @@ class AsyncAdvertisers(AsyncResource):
         domain, each with a confidence ``score`` and ``match_reason``. ``max_per_platform`` 1 to
         10, default 3."""
         return cast(ResolveResponse, await self._request(E.resolve_advertisers(domain, platform, max_per_platform)))
+
+    async def report_match(
+        self, domain: str, *, kind: ReportKind, advertiser_id: Optional[str] = None, note: Optional[str] = None
+    ) -> ResolveReportResponse:
+        """Reports a wrong or missing resolve match. ``kind="wrong_match"``: ``advertiser_id``
+        (``<platform>:<id>``, required) does not belong to the domain. ``kind="missing_match"``:
+        the domain's account is missing (``advertiser_id`` if you know it). ``note`` up to 1000
+        characters. We review reports; accepted ones change the resolve for everyone. Up to 50
+        per day, free. Not retried on 5xx, so it is never sent twice."""
+        return cast(ResolveReportResponse, await self._request(E.report_match(domain, kind, advertiser_id, note)))
+
+    async def list_reports(self) -> ResolveReportsResponse:
+        """Your last 100 resolve reports and how we resolved them, newest first. Free."""
+        return cast(ResolveReportsResponse, await self._request(E.list_reports()))
 
     async def get(self, id: str, *, refresh: Optional[bool] = None) -> AdvertiserResponse:
         """An advertiser incl. active ads and ads known in the archive. ``refresh=True`` crawls the

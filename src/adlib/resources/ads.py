@@ -25,6 +25,7 @@ class Ads(SyncResource):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        political: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -37,8 +38,9 @@ class Ads(SyncResource):
         listed in ``meta["errors"]`` and not billed. ``date_from``/``date_to`` are sent as
         ``from``/``to`` (shown on or after / before, YYYY-MM-DD). ``source="history"`` searches
         the archive, including ads gone from the platforms; with it, ``sort="days_running"``
-        puts the longest-running ads (likely winners) first. ``limit`` is a page size hint, 1
-        to 100."""
+        puts the longest-running ads (likely winners) first. ``political=True`` returns only
+        political or issue ads, ``False`` none (only Meta labels them, so ``True`` limits results
+        to Meta). ``limit`` is a page size hint, 1 to 100."""
         return cast(
             AdList,
             self._request(
@@ -52,6 +54,7 @@ class Ads(SyncResource):
                     date_from=date_from,
                     date_to=date_to,
                     format=format,
+                    political=political,
                     source=source,
                     sort=sort,
                     cursor=cursor,
@@ -87,6 +90,7 @@ class AsyncAds(AsyncResource):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        political: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -99,8 +103,9 @@ class AsyncAds(AsyncResource):
         listed in ``meta["errors"]`` and not billed. ``date_from``/``date_to`` are sent as
         ``from``/``to`` (shown on or after / before, YYYY-MM-DD). ``source="history"`` searches
         the archive, including ads gone from the platforms; with it, ``sort="days_running"``
-        puts the longest-running ads (likely winners) first. ``limit`` is a page size hint, 1
-        to 100."""
+        puts the longest-running ads (likely winners) first. ``political=True`` returns only
+        political or issue ads, ``False`` none (only Meta labels them, so ``True`` limits results
+        to Meta). ``limit`` is a page size hint, 1 to 100."""
         return cast(
             AdList,
             await self._request(
@@ -114,6 +119,7 @@ class AsyncAds(AsyncResource):
                     date_from=date_from,
                     date_to=date_to,
                     format=format,
+                    political=political,
                     source=source,
                     sort=sort,
                     cursor=cursor,

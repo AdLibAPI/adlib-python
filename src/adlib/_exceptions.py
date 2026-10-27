@@ -100,7 +100,9 @@ class AuthenticationError(APIStatusError):
 
 
 class PermissionDeniedError(APIStatusError):
-    """403: the key is disabled or not allowed to make this call."""
+    """403: the key is disabled or not allowed to make this call. ``code == "history_limit"``
+    means the ad is older than your plan's archive window (free 90 days, starter 365 days, growth
+    and up unlimited)."""
 
 
 class InsufficientCreditsError(APIStatusError):

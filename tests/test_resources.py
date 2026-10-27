@@ -26,6 +26,7 @@ def test_search_sends_every_filter(api: MockAPI) -> None:
         date_from="2026-01-01",
         date_to=dt.date(2026, 2, 1),
         format="video",
+        political=False,
         source="history",
         sort="days_running",
         cursor="c",
@@ -40,6 +41,7 @@ def test_search_sends_every_filter(api: MockAPI) -> None:
         "from": "2026-01-01",
         "to": "2026-02-01",
         "format": "video",
+        "political": "false",
         "source": "history",
         "sort": "days_running",
         "cursor": "c",
@@ -94,6 +96,50 @@ def test_advertisers(api: MockAPI) -> None:
         "GET /v1/advertisers/meta:1/stats",
         "GET /v1/advertisers/meta:1/timeline",
     ]
+
+
+def test_resolve_reports() -> None:
+    api = MockAPI(
+        json_response({"data": {"id": 7, "kind": "wrong_match", "status": "open"}}, 201),
+        json_response({"data": {"id": 8}}, 201),
+        json_response({"data": []}),
+    )
+    client = api.client()
+    created = client.advertisers.report_match(
+        "audi.de",
+        kind="wrong_match",
+        advertiser_id="google:AR01700036858500612097",
+        note="agency account, not the brand",
+    )
+    assert created["data"]["id"] == 7
+    client.advertisers.report_match("audi.de", kind="missing_match")
+    client.advertisers.list_reports()
+    r = api.requests
+    assert body(r[0]) == {
+        "domain": "audi.de",
+        "kind": "wrong_match",
+        "advertiser_id": "google:AR01700036858500612097",
+        "note": "agency account, not the brand",
+    }
+    assert body(r[1]) == {"domain": "audi.de", "kind": "missing_match"}
+    assert calls(api) == [
+        "POST /v1/advertisers/resolve/reports",
+        "POST /v1/advertisers/resolve/reports",
+        "GET /v1/advertisers/resolve/reports",
+    ]
+
+
+def test_companies() -> None:
+    api = MockAPI(json_response({"data": {"domain": "audi.de"}}))
+    client = api.client()
+    assert client.companies.get("audi.de")["data"]["domain"] == "audi.de"
+    client.companies.get("audi.de", platform=["meta", "google"], min_score=0.5, max_per_platform=10)
+    client.companies.get("audi.de", min_score=0)
+    r = api.requests
+    assert calls(api) == ["GET /v1/companies/audi.de"] * 3
+    assert params(r[0]) == {}
+    assert params(r[1]) == {"platform": "meta,google", "min_score": "0.5", "max_per_platform": "10"}
+    assert params(r[2]) == {"min_score": "0"}
 
 
 def test_domains(api: MockAPI) -> None:
@@ -217,6 +263,9 @@ async def test_async_endpoints(api: MockAPI) -> None:
     await client.advertisers.changes("meta:1", since="2026-10-01")
     await client.advertisers.stats("meta:1")
     await client.advertisers.timeline("meta:1")
+    await client.advertisers.report_match("audi.de", kind="missing_match")
+    await client.advertisers.list_reports()
+    await client.companies.get("audi.de", min_score=0.9)
     await client.domains.check("nike.com")
     await client.batch.create(type="ads", items=["meta:1"])
     await client.batch.get("j")
@@ -236,5 +285,11 @@ async def test_async_endpoints(api: MockAPI) -> None:
     await client.status()
     await client.platforms()
     await client.aclose()
-    assert len(api.requests) == 27
-    assert calls(api)[10] == "POST /v1/batch"
+    assert len(api.requests) == 30
+    assert calls(api)[9:13] == [
+        "POST /v1/advertisers/resolve/reports",
+        "GET /v1/advertisers/resolve/reports",
+        "GET /v1/companies/audi.de",
+        "GET /v1/domains/nike.com/check",
+    ]
+    assert calls(api)[13] == "POST /v1/batch"

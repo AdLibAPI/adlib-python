@@ -43,6 +43,7 @@ def test_parses_api_error_shape() -> None:
         (401, "unauthorized", AuthenticationError),
         (402, "payment_required", InsufficientCreditsError),
         (403, "forbidden", PermissionDeniedError),
+        (403, "history_limit", PermissionDeniedError),
         (404, "not_found", NotFoundError),
         (429, "rate_limited", RateLimitError),
         (429, "quota_exceeded", QuotaExceededError),
@@ -122,6 +123,13 @@ def test_arguments_validated_before_sending(api: MockAPI) -> None:
         lambda: client.batch.create(type="advertisers", items=["meta:1"], options={"max_pages": 21}),
         lambda: client.webhooks.delivery("abc"),
         lambda: client.usage(days=93),
+        lambda: client.companies.get(""),
+        lambda: client.companies.get("audi.de", min_score=1.5),
+        lambda: client.companies.get("audi.de", max_per_platform=11),
+        lambda: client.advertisers.report_match("audi.de", kind="wrong_match"),
+        lambda: client.advertisers.report_match("audi.de", kind="bogus"),  # type: ignore[arg-type]
+        lambda: client.advertisers.report_match("audi.de", kind="missing_match", advertiser_id="audi"),
+        lambda: client.advertisers.report_match("audi.de", kind="missing_match", note="x" * 1001),
     ]
     for call in bad:
         with pytest.raises(ValueError):

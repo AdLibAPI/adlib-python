@@ -30,10 +30,12 @@ from .resources import (
     AsyncAds,
     AsyncAdvertisers,
     AsyncBatch,
+    AsyncCompanies,
     AsyncDomains,
     AsyncWatchlists,
     AsyncWebhooks,
     Batch,
+    Companies,
     Domains,
     Watchlists,
     Webhooks,
@@ -107,6 +109,7 @@ class AdLib(_ClientMixin):
 
     ads: Ads
     advertisers: Advertisers
+    companies: Companies
     domains: Domains
     batch: Batch
     watchlists: Watchlists
@@ -132,6 +135,7 @@ class AdLib(_ClientMixin):
 
         self.ads = Ads(self)
         self.advertisers = Advertisers(self)
+        self.companies = Companies(self)
         self.domains = Domains(self)
         self.batch = Batch(self)
         self.watchlists = Watchlists(self)
@@ -192,6 +196,7 @@ class AdLib(_ClientMixin):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        political: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -208,6 +213,7 @@ class AdLib(_ClientMixin):
             date_from=date_from,
             date_to=date_to,
             format=format,
+            political=political,
             source=source,
             sort=sort,
             cursor=cursor,
@@ -294,6 +300,7 @@ class AsyncAdLib(_ClientMixin):
 
     ads: AsyncAds
     advertisers: AsyncAdvertisers
+    companies: AsyncCompanies
     domains: AsyncDomains
     batch: AsyncBatch
     watchlists: AsyncWatchlists
@@ -319,6 +326,7 @@ class AsyncAdLib(_ClientMixin):
 
         self.ads = AsyncAds(self)
         self.advertisers = AsyncAdvertisers(self)
+        self.companies = AsyncCompanies(self)
         self.domains = AsyncDomains(self)
         self.batch = AsyncBatch(self)
         self.watchlists = AsyncWatchlists(self)
@@ -376,6 +384,7 @@ class AsyncAdLib(_ClientMixin):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        political: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -392,6 +401,7 @@ class AsyncAdLib(_ClientMixin):
             date_from=date_from,
             date_to=date_to,
             format=format,
+            political=political,
             source=source,
             sort=sort,
             cursor=cursor,

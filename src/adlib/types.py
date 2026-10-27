@@ -49,6 +49,14 @@ __all__ = [
     "WeekCount",
     "AdvertiserStats",
     "AdvertiserStatsResponse",
+    "ReportKind",
+    "ReportStatus",
+    "ResolveReport",
+    "ResolveReportResponse",
+    "ResolveReportsResponse",
+    "CompanyPlatform",
+    "Company",
+    "CompanyResponse",
     "PlatformCheck",
     "DomainCheck",
     "DomainCheckResponse",
@@ -95,6 +103,8 @@ EventType = Literal["started", "stopped", "changed", "discovered"]
 JobStatus = Literal["queued", "running", "done", "failed"]
 DeliveryStatus = Literal["pending", "delivered", "failed"]
 BatchType = Literal["advertisers", "domains", "ads"]
+ReportKind = Literal["wrong_match", "missing_match"]
+ReportStatus = Literal["open", "accepted", "rejected"]
 
 # Optional keys live in a total=False base class; the class itself lists the required keys.
 
@@ -192,6 +202,8 @@ class Ad(_AdOpt):
     eu_data: EUData
     spend_range: Range
     impressions_range: Range
+    political: Optional[bool]
+    """Political or issue ad. Meta only; ``None`` where the platform doesn't label it."""
     derived: Derived
 
 
@@ -217,7 +229,8 @@ class Advertiser(_AdvertiserOpt):
 
 class ResolvedAdvertiser(Advertiser):
     score: float
-    match_reason: Literal["domain", "name", "history"]
+    match_reason: Literal["domain", "name", "history", "manual"]
+    """``manual`` = confirmed by us (or from a customer report we accepted)."""
 
 
 class PlatformFailure(TypedDict):
@@ -328,6 +341,8 @@ class WeekCount(TypedDict):
 class AdvertiserStats(TypedDict):
     advertiser_id: str
     total_ads: int
+    political_ads: int
+    """Ads the platform labels political or issue ads (Meta only)."""
     by_status: Dict[str, int]
     by_format: Dict[str, int]
     by_country: Dict[str, int]
@@ -341,6 +356,55 @@ class AdvertiserStats(TypedDict):
 
 class AdvertiserStatsResponse(TypedDict):
     data: AdvertiserStats
+
+
+class ResolveReport(TypedDict):
+    id: int
+    domain: str
+    advertiser_id: Optional[str]
+    kind: ReportKind
+    note: Optional[str]
+    status: ReportStatus
+    resolution: Optional[str]
+    """Our answer when the report was reviewed."""
+    created_at: str
+    resolved_at: Optional[str]
+
+
+class ResolveReportResponse(TypedDict):
+    data: ResolveReport
+
+
+class ResolveReportsResponse(TypedDict):
+    data: Optional[List[ResolveReport]]
+
+
+class CompanyPlatform(TypedDict):
+    platform: str
+    accounts: int
+    total_ads_known: int
+    active_ads: int
+
+
+class _CompanyOpt(TypedDict, total=False):
+    errors: Optional[List[PlatformFailure]]
+
+
+class Company(_CompanyOpt):
+    domain: str
+    name: str
+    """Name of the most confident account."""
+    accounts: Optional[List[ResolvedAdvertiser]]
+    """Accounts with score >= min_score."""
+    candidates: Optional[List[ResolvedAdvertiser]]
+    """Possible accounts below min_score; report wrong ones with ``advertisers.report_match``."""
+    platforms: Optional[List[CompanyPlatform]]
+    stats: AdvertiserStats
+    """Combined history of all accounts (``advertiser_id`` is the domain)."""
+
+
+class CompanyResponse(TypedDict):
+    data: Company
 
 
 class _PlatformCheckOpt(TypedDict, total=False):
@@ -428,10 +492,12 @@ class Watchlist(TypedDict):
     id: str
     name: str
     webhook_url: Optional[str]
-    interval_seconds: int
+    interval_hours: int
     archive_videos: bool
     created_at: str
+    advertiser_count: int
     advertisers: Optional[List[WatchlistEntry]]
+    """Empty in ``watchlists.list()``; ``watchlists.get(id)`` has the entries."""
 
 
 class WatchlistResponse(TypedDict):
@@ -503,6 +569,8 @@ class Plan(TypedDict):
     max_batch_items: int
     max_watchlist_advertisers: int
     history_access: bool
+    history_days: int
+    """How far back archived ads are available; 0 = unlimited."""
 
 
 class UsageResponse(TypedDict):

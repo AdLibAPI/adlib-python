@@ -24,6 +24,7 @@ FORMATS = ("image", "video", "carousel", "text")
 DELIVERY_STATUSES = ("pending", "delivered", "failed")
 BATCH_TYPES = ("advertisers", "domains", "ads")
 EVENT_TYPES = ("started", "stopped", "changed", "discovered")
+REPORT_KINDS = ("wrong_match", "missing_match")
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,14 @@ def _int_range(name: str, value: Optional[int], lo: int, hi: Optional[int]) -> O
     if isinstance(value, bool) or not isinstance(value, int) or value < lo or (hi is not None and value > hi):
         upper = f" to {hi}" if hi is not None else " or more"
         raise ValueError(f"{name} must be an integer from {lo}{upper}")
+    return value
+
+
+def _number_range(name: str, value: Optional[float], lo: float, hi: float) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not lo <= value <= hi:
+        raise ValueError(f"{name} must be a number from {lo:g} to {hi:g}")
     return value
 
 
@@ -135,6 +144,7 @@ def search(
     date_from: DateLike,
     date_to: DateLike,
     format: Optional[str],
+    political: Optional[bool],
     source: Optional[str],
     sort: Optional[str],
     cursor: Optional[str],
@@ -156,6 +166,7 @@ def search(
             "from": _date(date_from),
             "to": _date(date_to),
             "format": _one_of("format", format, FORMATS),
+            "political": political,
             "source": _one_of("source", source, SOURCES),
             "sort": _one_of("sort", sort, SORTS),
             "cursor": cursor,
@@ -184,6 +195,31 @@ def resolve_advertisers(domain: str, platform: PlatformFilter, max_per_platform:
             "max_per_platform": _int_range("max_per_platform", max_per_platform, 1, 10),
         },
     )
+
+
+def report_match(domain: str, kind: str, advertiser_id: Optional[str], note: Optional[str]) -> Request:
+    if _one_of("kind", kind, REPORT_KINDS) is None:
+        raise ValueError("kind is required")
+    if kind == "wrong_match" and advertiser_id is None:
+        raise ValueError("advertiser_id is required for kind wrong_match")
+    if note is not None and len(note) > 1000:
+        raise ValueError("note must be at most 1000 characters")
+    return Request(
+        "POST",
+        "/v1/advertisers/resolve/reports",
+        body=_compact(
+            {
+                "domain": _non_empty("domain", domain),
+                "kind": kind,
+                "advertiser_id": _prefixed_id("advertiser_id", advertiser_id) if advertiser_id is not None else None,
+                "note": note,
+            }
+        ),
+    )
+
+
+def list_reports() -> Request:
+    return Request("GET", "/v1/advertisers/resolve/reports")
 
 
 def get_advertiser(id: str, refresh: Optional[bool]) -> Request:
@@ -248,6 +284,20 @@ def advertiser_timeline(
 def check_domain(domain: str, platform: PlatformFilter) -> Request:
     return Request(
         "GET", f"/v1/domains/{_seg(_non_empty('domain', domain))}/check", {"platform": _csv("platform", platform)}
+    )
+
+
+def get_company(
+    domain: str, platform: PlatformFilter, min_score: Optional[float], max_per_platform: Optional[int]
+) -> Request:
+    return Request(
+        "GET",
+        f"/v1/companies/{_seg(_non_empty('domain', domain))}",
+        {
+            "platform": _csv("platform", platform),
+            "min_score": _number_range("min_score", min_score, 0, 1),
+            "max_per_platform": _int_range("max_per_platform", max_per_platform, 1, 10),
+        },
     )
 
 
