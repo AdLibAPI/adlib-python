@@ -1,7 +1,7 @@
 # Publishes to PyPI when a GitHub release is published.
 # Uses PyPI trusted publishing (OIDC), so no API token is stored in the repo.
 # One-time setup on PyPI: add a trusted publisher for project "adlib-api" with
-# owner "adlib", repository "adlib-python", workflow "publish.yml", environment "pypi".
+# owner "AdLibAPI", repository "adlib-python", workflow "publish.yml", environment "pypi".
 name: Publish
 
 on:

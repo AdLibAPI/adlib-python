@@ -291,7 +291,7 @@ def retry_status_error(response: httpx.Response, idempotent: bool) -> Optional[A
 
     429 ``rate_limited`` is rejected before the request is handled, so it is retried for every
     method; ``quota_exceeded`` will not clear by waiting. 502, 503 and 504 are retried only for
-    GET and DELETE: a POST may already have been processed.
+    GET, PATCH and DELETE: a POST may already have been processed.
     """
     status = response.status_code
     if status == 429:
@@ -307,7 +307,7 @@ _NOT_SENT_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 
 
 def can_retry_error(exc: Exception, idempotent: bool) -> bool:
-    """Whether a timeout or network error may be retried. GET and DELETE always may; POSTs only
+    """Whether a timeout or network error may be retried. GET, PATCH and DELETE always may; POSTs only
     when the connection was never made."""
     return idempotent or isinstance(exc, _NOT_SENT_ERRORS)
 

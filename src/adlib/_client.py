@@ -43,6 +43,9 @@ from .resources import (
 from .types import (
     AdFormat,
     AdList,
+    CoverageResponse,
+    LibraryUrlResponse,
+    Placement,
     PlatformsResponse,
     Sort,
     Source,
@@ -196,7 +199,9 @@ class AdLib(_ClientMixin):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        placement: Optional[Placement] = None,
         political: Optional[bool] = None,
+        removed: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -213,7 +218,9 @@ class AdLib(_ClientMixin):
             date_from=date_from,
             date_to=date_to,
             format=format,
+            placement=placement,
             political=political,
+            removed=removed,
             source=source,
             sort=sort,
             cursor=cursor,
@@ -231,6 +238,17 @@ class AdLib(_ClientMixin):
     def platforms(self) -> PlatformsResponse:
         """Supported search modes and filters per platform. Not billed."""
         return cast(PlatformsResponse, self._send(E.platforms()))
+
+    def library_url(self, url: str) -> LibraryUrlResponse:
+        """Turns a link copied from the Meta Ad Library, Google Ads Transparency Center, TikTok Ad
+        Library, LinkedIn Ad Library, Pinterest Ads Repository or an X post into an AdLib id, with
+        the endpoint that fetches it. Free."""
+        return cast(LibraryUrlResponse, self._send(E.library_url(url)))
+
+    def coverage(self) -> CoverageResponse:
+        """Archive size and freshness: ads, removed ads kept, media, crawls, per platform. Public,
+        not billed."""
+        return cast(CoverageResponse, self._send(E.coverage()))
 
     # --- pagination -----------------------------------------------------------
 
@@ -384,7 +402,9 @@ class AsyncAdLib(_ClientMixin):
         date_from: DateLike = None,
         date_to: DateLike = None,
         format: Optional[AdFormat] = None,
+        placement: Optional[Placement] = None,
         political: Optional[bool] = None,
+        removed: Optional[bool] = None,
         source: Optional[Source] = None,
         sort: Optional[Sort] = None,
         cursor: Optional[str] = None,
@@ -401,7 +421,9 @@ class AsyncAdLib(_ClientMixin):
             date_from=date_from,
             date_to=date_to,
             format=format,
+            placement=placement,
             political=political,
+            removed=removed,
             source=source,
             sort=sort,
             cursor=cursor,
@@ -419,6 +441,17 @@ class AsyncAdLib(_ClientMixin):
     async def platforms(self) -> PlatformsResponse:
         """Supported search modes and filters per platform. Not billed."""
         return cast(PlatformsResponse, await self._send(E.platforms()))
+
+    async def library_url(self, url: str) -> LibraryUrlResponse:
+        """Turns a link copied from the Meta Ad Library, Google Ads Transparency Center, TikTok Ad
+        Library, LinkedIn Ad Library, Pinterest Ads Repository or an X post into an AdLib id, with
+        the endpoint that fetches it. Free."""
+        return cast(LibraryUrlResponse, await self._send(E.library_url(url)))
+
+    async def coverage(self) -> CoverageResponse:
+        """Archive size and freshness: ads, removed ads kept, media, crawls, per platform. Public,
+        not billed."""
+        return cast(CoverageResponse, await self._send(E.coverage()))
 
     async def paginate(
         self,

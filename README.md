@@ -1,17 +1,19 @@
 # adlib-api – Ad library API client for Python
 
 [![PyPI](https://img.shields.io/pypi/v/adlib-api.svg)](https://pypi.org/project/adlib-api/) [![Python](https://img.shields.io/pypi/pyversions/adlib-api.svg)](https://pypi.org/project/adlib-api/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/AdLibAPI/adlib-python/blob/main/LICENSE)
 
 Official Python client for the **AdLib API**, one REST API for the public ad libraries of
-**Meta (Facebook/Instagram), Google, TikTok, LinkedIn, Pinterest and X**. Find a brand's advertiser
-accounts on every platform from its domain, search and read ads, see how long they ran and what
-changed, and set up watchlists that report new, stopped and changed ads to your webhook.
+**Meta (Facebook/Instagram), Google (incl. YouTube and Google Play), TikTok, LinkedIn, Pinterest, X,
+Snapchat, Apple, Amazon and Microsoft** (Microsoft in beta). Find a brand's advertiser accounts on
+every platform from its domain, search and read ads, see how long they ran and what changed, break a
+creative down into its features, and set up watchlists that report new, stopped, changed and removed
+ads to your webhook or by email.
 
 Ads that disappear from a platform's library stay in the AdLib archive, with their run time,
-creative versions and permanently archived images.
+creative versions and permanently archived images, and are marked with `removed_from_library_at`.
 
-> **Get an API key:** [adlibapi.com](https://adlibapi.com) · Docs: [api.adlibapi.com/docs](https://api.adlibapi.com/docs)
+> **Get an API key:** [adlibapi.com](https://adlibapi.com) (the free plan includes 5,000 credits a month) · Docs: [api.adlibapi.com/docs](https://api.adlibapi.com/docs)
 
 **SDKs and integrations:** [Node.js](https://github.com/AdLibAPI/adlib-node) · [MCP server](https://www.npmjs.com/package/adlib-mcp)
 
@@ -45,7 +47,7 @@ for a in resolved["data"]["advertisers"] or []:
 # 2. Their ads (one search mode: q, advertiser or domain)
 page = client.search(advertiser="meta:15087023444", status="active", limit=25)
 for ad in page["data"] or []:
-    print(ad["id"], ad["status"], ad["derived"]["days_running"])
+    print(ad["id"], ad["status"], ad["derived"]["days_running"], ad["derived"]["stage"])
 if page["meta"].get("errors"):
     print("platforms that failed (not billed):", page["meta"]["errors"])
 
@@ -55,8 +57,13 @@ watchlist = client.watchlists.create(
     advertisers=["meta:15087023444", "tiktok:7012345678901234567"],
     webhook_url="https://your-app.example/webhooks/adlib",
     interval_hours=24,
+    email_alerts=True,  # also mail a digest of each crawl's changes
 )
 print(watchlist["data"]["id"])
+
+# 4. What makes their longest-running ad work: hook, offers, urgency, format, cuts, on-image text
+features = client.ads.features("meta:1187430977361020")["data"]
+print(features["format"], features["text"]["hook"], features["text"]["urgency"])
 ```
 
 Requests go to `https://api.adlibapi.com` with an `X-API-Key` header. Ids are
@@ -85,7 +92,7 @@ def adlib_webhook():
     except WebhookSignatureError:
         return "", 400
     if event["event"] == "advertiser.changes":
-        print(event["advertiser_id"], event["summary"])  # new, started, stopped, changed
+        print(event["advertiser_id"], event["summary"])  # new, started, stopped, changed, removed
     return "", 200
 ```
 
@@ -112,7 +119,7 @@ asyncio.run(main())
 
 ## Credits
 
-Calls are billed in credits per delivered result (the `X-Billing-Credits` response header):
+The free plan includes **5,000 credits a month**. Calls are billed in credits per delivered result (the `X-Billing-Credits` response header):
 1 per ad on Meta, TikTok, Pinterest and X, 2 on Google, 3 on LinkedIn, double for archived ads last
 shown more than a year ago. A live search page costs at most 5 ads' worth per platform
 (5 credits on Meta, 10 on Google, 15 on LinkedIn), however many ads it returns.
@@ -157,20 +164,47 @@ client.search(advertiser="Nike", date_from="2026-01-01", date_to="2026-04-01")
 client.search(q="election", political=True)
 # Our archive, including ads gone from the platforms; longest-running first
 client.search(advertiser="meta:15087023444", source="history", sort="days_running")
+# Ads the platforms' libraries no longer show (taken down, deleted or aged out) that we kept
+client.search(domain="nike.com", source="history", removed=True)
+# YouTube video ads (youtube and play are aliases for Google with that placement)
+client.search(advertiser="Nike", platform="youtube", format="video")
+client.search(domain="nike.com", platform="google", placement="shopping")
+# The newer platforms
+client.search(q="running shoes", platform=["snapchat", "amazon", "microsoft"])
 ```
 
 `client.search` is the same as `client.ads.search`. `date_from` and `date_to` are sent as `from`
 and `to` and accept strings or `date`/`datetime`. Without `platform`, all platforms that support the
-query are asked in parallel; failed ones are listed in `meta["errors"]` and not billed. See
-`client.platforms()` for the search modes and filters each platform supports.
+query are asked in parallel; failed ones are listed in `meta["errors"]` and not billed, and
+`meta["platform_totals"]` holds the number of matching ads per platform where the platform reports
+it. See `client.platforms()` for the search modes and filters each platform supports.
+
+Platforms: `meta`, `google`, `tiktok`, `linkedin`, `pinterest`, `x`, `snapchat`, `apple`, `amazon`
+and `microsoft` (beta), as `adlib.types.PLATFORMS`. In search, `youtube` and `play` are accepted
+too. `placement` (Google only) is one of `youtube`, `search`, `shopping`, `maps` and `play`.
 
 ### Ads
 
 ```python
 client.ads.get("meta:1234567890")              # live, or the archived version
 client.ads.get("meta:1234567890", max_age=0)   # always fetch live
-client.ads.history("meta:1234567890")          # versions, status periods, events
+client.ads.history("meta:1234567890")          # versions, status periods, events, EU reach per day
+client.ads.features("meta:1234567890")         # creative features (default 2 credits)
+
+# Got a link from an ad library? Turn it into an AdLib id (free)
+ref = client.library_url("https://www.facebook.com/ads/library/?id=1187430977361020")["data"]
+print(ref["kind"], ref["id"], ref["href"])  # ad meta:1187430977361020 /v1/ads/meta:1187430977361020
 ```
+
+Every ad has `derived["signals"]` (why it likely performs, from public facts: `long_running`,
+`still_running_90d`, `scaled`, `wide_reach`, `multi_country`) and `derived["stage"]` (`testing`,
+`scaling` or `proven`). `removed_from_library_at` is set once the platform's library stops showing
+the ad; we keep it.
+
+`ads.features(id)` is rule-based and measured, no AI model: every text tag (`urgency`,
+`social_proof`, `guarantee`, `free_offer`, `free_shipping`, `novelty`) carries the exact text it
+matched, media are measured with ffprobe/ffmpeg (aspect, duration, scene cuts, audio) and on-image
+text is read with OCR. Results are kept per ad version.
 
 ### Advertisers
 
@@ -178,7 +212,7 @@ client.ads.history("meta:1234567890")          # versions, status periods, event
 client.advertisers.resolve("nike.com", platform="meta,google", max_per_platform=3)
 client.advertisers.get("meta:15087023444", refresh=True)
 client.advertisers.ads("meta:15087023444", source="history", status="inactive")
-client.advertisers.changes("meta:15087023444", since="2026-10-01", types=["started", "stopped"])
+client.advertisers.changes("meta:15087023444", since="2026-10-01", types=["started", "stopped", "removed"])
 client.advertisers.stats("meta:15087023444")   # by status/format/country/language, winners
 client.advertisers.timeline("meta:15087023444", date_from="2026-01-01")
 
@@ -216,6 +250,8 @@ a `role` and a `role_source` (manual or inferred). Costs one resolve plus one st
 ```python
 check = client.domains.check("nike.com")  # is this company advertising right now, and where?
 print(check["data"]["advertising"], [(p["platform"], p["active_ads"]) for p in check["data"]["platforms"] or []])
+print(check["data"]["columns"])  # flat dict for spreadsheets: advertising, total_active_ads, meta_active_ads, ...
+client.domains.suggest("nik")    # autocomplete from domains we know (free)
 ```
 
 ### Batch jobs
@@ -235,6 +271,7 @@ result = client.batch.get(job["data"]["job_id"])  # status and paginated items
 ```python
 client.watchlists.list()               # advertiser_count per watchlist; advertisers is empty here
 client.watchlists.get(watchlist_id)    # incl. the crawl status of each advertiser
+client.watchlists.update(watchlist_id, name="Rivals", webhook_url="", email_alerts=True)  # "" removes the webhook
 client.watchlists.add_advertisers(watchlist_id, ["google:AR18378488041124659201"])
 client.watchlists.remove_advertiser(watchlist_id, "google:AR18378488041124659201")
 client.watchlists.delete(watchlist_id)
@@ -257,7 +294,14 @@ client.webhooks.rotate_secret()   # the old secret stops working immediately
 client.usage(days=30)   # plan, credits this month, daily rows
 client.status()         # health per platform (not billed)
 client.platforms()      # search modes and filters per platform
+client.coverage()       # archive size and freshness (public)
 ```
+
+### CSV
+
+The API answers any `/v1` endpoint as CSV with `output=csv`. The client returns parsed JSON only;
+for CSV, call the API with `httpx` directly (the next page's cursor is in the `X-Next-Cursor`
+header).
 
 ### Endpoints not wrapped yet
 
@@ -331,7 +375,7 @@ jitter):
 
 - **429 `rate_limited`** on every request, waiting `Retry-After` (capped at 60 s). The API rejects
   these before doing anything, so retrying a POST is safe.
-- **502, 503, 504, timeouts and network errors** on GET and DELETE. POSTs (batch jobs, watchlists,
+- **502, 503, 504, timeouts and network errors** on GET, PATCH and DELETE. POSTs (batch jobs, watchlists,
   test events, secret rotation) are retried only when the connection was never made.
 - Never: `quota_exceeded`, 500 and other 4xx errors.
 

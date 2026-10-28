@@ -21,9 +21,10 @@ STATUSES = ("active", "inactive", "all")
 SOURCES = ("live", "history")
 SORTS = ("newest", "days_running")
 FORMATS = ("image", "video", "carousel", "text")
+PLACEMENTS = ("youtube", "search", "shopping", "maps", "play")
 DELIVERY_STATUSES = ("pending", "delivered", "failed")
 BATCH_TYPES = ("advertisers", "domains", "ads")
-EVENT_TYPES = ("started", "stopped", "changed", "discovered")
+EVENT_TYPES = ("started", "stopped", "changed", "discovered", "removed")
 REPORT_KINDS = ("wrong_match", "missing_match", "wrong_role")
 REPORT_ROLES = ("brand", "agency", "reseller", "partner")
 
@@ -37,7 +38,7 @@ class Request:
 
     @property
     def idempotent(self) -> bool:
-        return self.method != "POST"
+        return self.method != "POST"  # GET, PATCH and DELETE are safe to repeat
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +146,9 @@ def search(
     date_from: DateLike,
     date_to: DateLike,
     format: Optional[str],
+    placement: Optional[str],
     political: Optional[bool],
+    removed: Optional[bool],
     source: Optional[str],
     sort: Optional[str],
     cursor: Optional[str],
@@ -167,7 +170,9 @@ def search(
             "from": _date(date_from),
             "to": _date(date_to),
             "format": _one_of("format", format, FORMATS),
+            "placement": _one_of("placement", placement, PLACEMENTS),
             "political": political,
+            "removed": removed,
             "source": _one_of("source", source, SOURCES),
             "sort": _one_of("sort", sort, SORTS),
             "cursor": cursor,
@@ -184,6 +189,18 @@ def get_ad(id: str, max_age: Optional[int]) -> Request:
 
 def ad_history(id: str) -> Request:
     return Request("GET", f"/v1/ads/{_seg(_prefixed_id('id', id))}/history")
+
+
+def ad_features(id: str) -> Request:
+    return Request("GET", f"/v1/ads/{_seg(_prefixed_id('id', id))}/features")
+
+
+def library_url(url: str) -> Request:
+    return Request("GET", "/v1/library-url", {"url": _non_empty("url", url)})
+
+
+def coverage() -> Request:
+    return Request("GET", "/public/coverage")
 
 
 def resolve_advertisers(domain: str, platform: PlatformFilter, max_per_platform: Optional[int]) -> Request:
@@ -293,6 +310,13 @@ def check_domain(domain: str, platform: PlatformFilter) -> Request:
     )
 
 
+def suggest_domains(q: str, limit: Optional[int]) -> Request:
+    s = _non_empty("q", q)
+    if not 2 <= len(s) <= 100:
+        raise ValueError("q must be 2 to 100 characters")
+    return Request("GET", "/v1/domains/suggest", {"q": s, "limit": _int_range("limit", limit, 1, 20)})
+
+
 def get_company(
     domain: str,
     platform: PlatformFilter,
@@ -354,6 +378,7 @@ def create_watchlist(
     webhook_url: Optional[str],
     interval_hours: Optional[int],
     archive_videos: Optional[bool],
+    email_alerts: Optional[bool] = None,
 ) -> Request:
     if name is not None and len(name) > 200:
         raise ValueError("name must be at most 200 characters")
@@ -367,6 +392,7 @@ def create_watchlist(
                 "webhook_url": webhook_url,
                 "interval_hours": _int_range("interval_hours", interval_hours, 1, 168),
                 "archive_videos": archive_videos,
+                "email_alerts": email_alerts,
             }
         ),
     )
@@ -374,6 +400,17 @@ def create_watchlist(
 
 def get_watchlist(id: str) -> Request:
     return Request("GET", f"/v1/watchlists/{_seg(_non_empty('id', id))}")
+
+
+def update_watchlist(
+    id: str, name: Optional[str], webhook_url: Optional[str], email_alerts: Optional[bool]
+) -> Request:
+    if name is not None and len(name) > 200:
+        raise ValueError("name must be at most 200 characters")
+    body = _compact({"name": name, "webhook_url": webhook_url, "email_alerts": email_alerts})
+    if not body:
+        raise ValueError("Pass at least one of name, webhook_url or email_alerts")
+    return Request("PATCH", f"/v1/watchlists/{_seg(_non_empty('id', id))}", body=body)
 
 
 def delete_watchlist(id: str) -> Request:

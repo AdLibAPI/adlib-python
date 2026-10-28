@@ -10,7 +10,7 @@ __all__ = ["Watchlists", "AsyncWatchlists"]
 
 
 class Watchlists(SyncResource):
-    """Watchlists: advertisers are crawled regularly and your webhook is called on changes."""
+    """Watchlists: advertisers are crawled regularly; changes go to your webhook or by email."""
 
     def list(self) -> WatchlistsResponse:
         """Your watchlists."""
@@ -24,16 +24,32 @@ class Watchlists(SyncResource):
         webhook_url: Optional[str] = None,
         interval_hours: Optional[int] = None,
         archive_videos: Optional[bool] = None,
+        email_alerts: Optional[bool] = None,
     ) -> WatchlistResponse:
         """Creates a watchlist. ``advertisers`` are ids ``<platform>:<id>`` (find them with
         ``advertisers.resolve``). ``webhook_url`` receives ``advertiser.changes`` events.
         ``interval_hours`` 1 to 168 (default 24). ``archive_videos`` keeps full video files
-        (default true). Not retried on 5xx, so it is never created twice."""
-        return cast(WatchlistResponse, self._request(E.create_watchlist(advertisers, name, webhook_url, interval_hours, archive_videos)))
+        (default true). ``email_alerts`` mails a digest of each crawl's changes (new, stopped,
+        changed, removed ads) to your account's email. Not retried on 5xx, so it is never created
+        twice."""
+        return cast(WatchlistResponse, self._request(E.create_watchlist(advertisers, name, webhook_url, interval_hours, archive_videos, email_alerts)))
 
     def get(self, id: str) -> WatchlistResponse:
         """A watchlist with the crawl status of each advertiser."""
         return cast(WatchlistResponse, self._request(E.get_watchlist(id)))
+
+    def update(
+        self,
+        id: str,
+        *,
+        name: Optional[str] = None,
+        webhook_url: Optional[str] = None,
+        email_alerts: Optional[bool] = None,
+    ) -> WatchlistResponse:
+        """Changes a watchlist's name, webhook or email alerts; arguments left out stay as they are.
+        ``webhook_url=""`` removes the webhook (Slack and Discord webhooks get a readable
+        message)."""
+        return cast(WatchlistResponse, self._request(E.update_watchlist(id, name, webhook_url, email_alerts)))
 
     def delete(self, id: str) -> None:
         """Deletes a watchlist."""
@@ -63,16 +79,32 @@ class AsyncWatchlists(AsyncResource):
         webhook_url: Optional[str] = None,
         interval_hours: Optional[int] = None,
         archive_videos: Optional[bool] = None,
+        email_alerts: Optional[bool] = None,
     ) -> WatchlistResponse:
         """Creates a watchlist. ``advertisers`` are ids ``<platform>:<id>`` (find them with
         ``advertisers.resolve``). ``webhook_url`` receives ``advertiser.changes`` events.
         ``interval_hours`` 1 to 168 (default 24). ``archive_videos`` keeps full video files
-        (default true). Not retried on 5xx, so it is never created twice."""
-        return cast(WatchlistResponse, await self._request(E.create_watchlist(advertisers, name, webhook_url, interval_hours, archive_videos)))
+        (default true). ``email_alerts`` mails a digest of each crawl's changes (new, stopped,
+        changed, removed ads) to your account's email. Not retried on 5xx, so it is never created
+        twice."""
+        return cast(WatchlistResponse, await self._request(E.create_watchlist(advertisers, name, webhook_url, interval_hours, archive_videos, email_alerts)))
 
     async def get(self, id: str) -> WatchlistResponse:
         """A watchlist with the crawl status of each advertiser."""
         return cast(WatchlistResponse, await self._request(E.get_watchlist(id)))
+
+    async def update(
+        self,
+        id: str,
+        *,
+        name: Optional[str] = None,
+        webhook_url: Optional[str] = None,
+        email_alerts: Optional[bool] = None,
+    ) -> WatchlistResponse:
+        """Changes a watchlist's name, webhook or email alerts; arguments left out stay as they are.
+        ``webhook_url=""`` removes the webhook (Slack and Discord webhooks get a readable
+        message)."""
+        return cast(WatchlistResponse, await self._request(E.update_watchlist(id, name, webhook_url, email_alerts)))
 
     async def delete(self, id: str) -> None:
         """Deletes a watchlist."""

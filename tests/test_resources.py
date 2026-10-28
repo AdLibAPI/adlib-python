@@ -5,6 +5,10 @@ from typing import Dict
 
 import httpx
 
+import pytest
+
+from adlib.types import PLATFORMS
+
 from .conftest import MockAPI, body, json_response
 
 
@@ -51,6 +55,27 @@ def test_search_sends_every_filter(api: MockAPI) -> None:
     assert params(api.last) == {"advertiser": "meta:15087023444"}
 
 
+def test_search_new_platforms_aliases_placement_and_removed(api: MockAPI) -> None:
+    client = api.client()
+    client.search(q="shoes", platform=["snapchat", "apple", "amazon", "microsoft"])
+    assert params(api.last) == {"q": "shoes", "platform": "snapchat,apple,amazon,microsoft"}
+    client.search(q="shoes", platform="youtube", format="video")
+    assert params(api.last) == {"q": "shoes", "platform": "youtube", "format": "video"}
+    client.search(domain="nike.com", platform="google", placement="shopping")
+    assert params(api.last) == {"domain": "nike.com", "platform": "google", "placement": "shopping"}
+    client.ads.search(domain="nike.com", source="history", removed=True)
+    assert params(api.last) == {"domain": "nike.com", "source": "history", "removed": "true"}
+    with pytest.raises(ValueError, match="placement must be one of"):
+        client.search(q="x", placement="tv")  # type: ignore[arg-type]
+    assert len(api.requests) == 4
+
+
+def test_platforms_constant() -> None:
+    assert PLATFORMS == (
+        "meta", "google", "tiktok", "linkedin", "pinterest", "x", "snapchat", "apple", "amazon", "microsoft"
+    )
+
+
 def test_ads(api: MockAPI) -> None:
     client = api.client()
     client.ads.get("meta:1234567890")
@@ -58,6 +83,35 @@ def test_ads(api: MockAPI) -> None:
     client.ads.history("meta:1")
     assert calls(api) == ["GET /v1/ads/meta:1234567890", "GET /v1/ads/google:CR1", "GET /v1/ads/meta:1/history"]
     assert params(api.requests[1]) == {"max_age": "0"}
+
+
+def test_ad_features() -> None:
+    api = MockAPI(
+        json_response(
+            {
+                "data": {"version": "1", "method": "rules", "format": "vertical_video", "text": {"hook": "New?"}, "media": []},
+                "meta": {"ad_id": "meta:1187430977361020", "cached": True, "analyzed_at": "2026-10-27T10:00:00Z"},
+            }
+        )
+    )
+    client = api.client()
+    res = client.ads.features("meta:1187430977361020")
+    assert calls(api) == ["GET /v1/ads/meta:1187430977361020/features"]
+    assert res["data"]["format"] == "vertical_video" and res["meta"]["cached"] is True
+    with pytest.raises(ValueError, match="<platform>:<id>"):
+        client.ads.features("1187430977361020")
+
+
+def test_library_url_and_coverage(api: MockAPI) -> None:
+    client = api.client()
+    link = "https://www.facebook.com/ads/library/?id=1187430977361020"
+    client.library_url(link)
+    assert api.last.url.path == "/v1/library-url"
+    assert params(api.last) == {"url": link}
+    client.coverage()
+    assert str(api.last.url) == "https://api.adlibapi.com/public/coverage"
+    with pytest.raises(ValueError, match="url must be a non-empty string"):
+        client.library_url(" ")
 
 
 def test_path_segments_are_encoded_but_keep_colons(api: MockAPI) -> None:
@@ -74,7 +128,7 @@ def test_advertisers(api: MockAPI) -> None:
     client.advertisers.resolve("nike.com", platform="meta,tiktok", max_per_platform=5)
     client.advertisers.get("meta:15087023444", refresh=True)
     client.advertisers.ads("meta:15087023444", status="inactive", source="history", sort="days_running", limit=100, cursor="c")
-    client.advertisers.changes("meta:1", since="2026-10-01", types=["started", "discovered"], limit=200)
+    client.advertisers.changes("meta:1", since="2026-10-01", types=["started", "discovered", "removed"], limit=200)
     client.advertisers.changes("meta:1", since=dt.datetime(2026, 10, 1, tzinfo=dt.timezone.utc))
     client.advertisers.stats("meta:1")
     client.advertisers.timeline("meta:1", date_from="2026-01-01", date_to="2026-02-01", cursor="c", limit=10)
@@ -83,7 +137,7 @@ def test_advertisers(api: MockAPI) -> None:
     assert params(r[1]) == {"domain": "nike.com", "platform": "meta,tiktok", "max_per_platform": "5"}
     assert params(r[2]) == {"refresh": "true"}
     assert params(r[3]) == {"status": "inactive", "source": "history", "sort": "days_running", "limit": "100", "cursor": "c"}
-    assert params(r[4]) == {"since": "2026-10-01", "types": "started,discovered", "limit": "200"}
+    assert params(r[4]) == {"since": "2026-10-01", "types": "started,discovered,removed", "limit": "200"}
     assert params(r[5]) == {"since": "2026-10-01T00:00:00Z"}
     assert params(r[7]) == {"from": "2026-01-01", "to": "2026-02-01", "cursor": "c", "limit": "10"}
     assert calls(api) == [
@@ -156,6 +210,19 @@ def test_domains(api: MockAPI) -> None:
     assert params(api.last) == {"platform": "linkedin"}
 
 
+def test_domain_suggest(api: MockAPI) -> None:
+    client = api.client()
+    client.domains.suggest("nik")
+    assert api.last.url.path == "/v1/domains/suggest"
+    assert params(api.last) == {"q": "nik"}
+    client.domains.suggest("adid", limit=20)
+    assert params(api.last) == {"q": "adid", "limit": "20"}
+    with pytest.raises(ValueError, match="q must be 2 to 100 characters"):
+        client.domains.suggest("n")
+    with pytest.raises(ValueError, match="limit must be an integer"):
+        client.domains.suggest("nike", limit=21)
+
+
 def test_batch() -> None:
     api = MockAPI(json_response({"data": {"job_id": "j1"}}, 202))
     client = api.client()
@@ -189,6 +256,7 @@ def test_watchlists() -> None:
         webhook_url="https://hooks.test/w",
         interval_hours=12,
         archive_videos=False,
+        email_alerts=True,
     )
     client.watchlists.list()
     client.watchlists.get("wl-1")
@@ -203,6 +271,7 @@ def test_watchlists() -> None:
         "webhook_url": "https://hooks.test/w",
         "interval_hours": 12,
         "archive_videos": False,
+        "email_alerts": True,
     }
     assert body(r[4]) == {"advertisers": ["google:AR1"]}
     assert calls(api) == [
@@ -214,6 +283,23 @@ def test_watchlists() -> None:
         "DELETE /v1/watchlists/wl-1/advertisers/google:AR1",
         "DELETE /v1/watchlists/wl-1",
     ]
+
+
+def test_watchlist_update() -> None:
+    api = MockAPI(json_response({"data": {"id": "wl-1", "email_alerts": True}}))
+    client = api.client()
+    res = client.watchlists.update("wl-1", name="Rivals", webhook_url="", email_alerts=True)
+    assert res["data"]["email_alerts"] is True
+    assert api.last.method == "PATCH" and api.last.url.path == "/v1/watchlists/wl-1"
+    assert api.last.headers["content-type"] == "application/json"
+    assert body(api.last) == {"name": "Rivals", "webhook_url": "", "email_alerts": True}
+    client.watchlists.update("wl-1", email_alerts=False)
+    assert body(api.last) == {"email_alerts": False}
+    with pytest.raises(ValueError, match="at least one of"):
+        client.watchlists.update("wl-1")
+    with pytest.raises(ValueError, match="at most 200"):
+        client.watchlists.update("wl-1", name="x" * 201)
+    assert len(api.requests) == 2
 
 
 def test_webhooks(api: MockAPI) -> None:
@@ -290,8 +376,20 @@ async def test_async_endpoints(api: MockAPI) -> None:
     await client.usage()
     await client.status()
     await client.platforms()
+    await client.ads.features("meta:1")
+    await client.library_url("https://www.tiktok.com/@nike/video/1")
+    await client.coverage()
+    await client.domains.suggest("nik")
+    await client.watchlists.update("w", email_alerts=True)
     await client.aclose()
-    assert len(api.requests) == 30
+    assert len(api.requests) == 35
+    assert calls(api)[30:] == [
+        "GET /v1/ads/meta:1/features",
+        "GET /v1/library-url",
+        "GET /public/coverage",
+        "GET /v1/domains/suggest",
+        "PATCH /v1/watchlists/w",
+    ]
     assert calls(api)[9:13] == [
         "POST /v1/advertisers/resolve/reports",
         "GET /v1/advertisers/resolve/reports",

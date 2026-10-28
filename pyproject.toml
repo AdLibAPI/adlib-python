@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "adlib-api"
 dynamic = ["version"]
-description = "Python client for the AdLib API: one REST API for the public ad libraries of Meta, Google, TikTok, LinkedIn, Pinterest and X, with ad history, watchlists and webhooks."
+description = "Python client for the AdLib API: one REST API for the public ad libraries of Meta, Google (incl. YouTube), TikTok, LinkedIn, Pinterest, X, Snapchat, Apple, Amazon and Microsoft, with ad history, creative features, watchlists and webhooks."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.9"
 authors = [{ name = "AdLib" }]
-keywords = ["ad library", "meta ad library", "facebook ads", "google ads transparency", "tiktok ads", "linkedin ads", "competitor ads", "ad intelligence", "adlib", "sdk", "python"]
+keywords = ["ad library", "meta ad library", "facebook ads", "google ads transparency", "tiktok ads", "linkedin ads", "youtube ads", "snapchat ads", "amazon ads", "competitor ads", "ad intelligence", "adlib", "sdk", "python"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

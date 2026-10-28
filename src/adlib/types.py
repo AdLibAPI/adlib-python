@@ -7,10 +7,14 @@ strings.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, Union
 
 __all__ = [
     "Platform",
+    "PLATFORMS",
+    "PlatformAlias",
+    "Placement",
+    "AdStage",
     "AdStatus",
     "StatusFilter",
     "Source",
@@ -28,6 +32,24 @@ __all__ = [
     "EUData",
     "Derived",
     "Ad",
+    "FeatureMatch",
+    "TextFeatures",
+    "OCRResult",
+    "MediaFeatures",
+    "LandingFeatures",
+    "AdFeatures",
+    "AdFeaturesMeta",
+    "AdFeaturesResponse",
+    "LibraryUrl",
+    "LibraryUrlResponse",
+    "ReachPoint",
+    "FamilyBrand",
+    "CompanyFamily",
+    "DomainSuggestion",
+    "DomainSuggestionsResponse",
+    "CoveragePlatform",
+    "Coverage",
+    "CoverageResponse",
     "Advertiser",
     "ResolvedAdvertiser",
     "PlatformFailure",
@@ -95,13 +117,35 @@ __all__ = [
     "WebhookEvent",
 ]
 
-Platform = Literal["meta", "google", "tiktok", "linkedin", "pinterest", "x"]
+Platform = Literal[
+    "meta", "google", "tiktok", "linkedin", "pinterest", "x", "snapchat", "apple", "amazon", "microsoft"
+]
+PLATFORMS: Tuple[Platform, ...] = (
+    "meta",
+    "google",
+    "tiktok",
+    "linkedin",
+    "pinterest",
+    "x",
+    "snapchat",
+    "apple",
+    "amazon",
+    "microsoft",
+)
+"""Every platform ads can come from. ``microsoft`` is in beta."""
+PlatformAlias = Literal["youtube", "play"]
+"""Search-only aliases: Google ads on YouTube or Google Play (same as ``platform="google"`` with
+that ``placement``)."""
+Placement = Literal["youtube", "search", "shopping", "maps", "play"]
+"""Google only: where the ad ran."""
+AdStage = Literal["testing", "scaling", "proven"]
 AdStatus = Literal["active", "inactive", "unknown"]
 StatusFilter = Literal["active", "inactive", "all"]
 Source = Literal["live", "history"]
 Sort = Literal["newest", "days_running"]
 AdFormat = Literal["image", "video", "carousel", "text"]
-EventType = Literal["started", "stopped", "changed", "discovered"]
+EventType = Literal["started", "stopped", "changed", "discovered", "removed"]
+"""``removed``: the platform's library no longer shows the ad (we keep it)."""
 JobStatus = Literal["queued", "running", "done", "failed"]
 DeliveryStatus = Literal["pending", "delivered", "failed"]
 BatchType = Literal["advertisers", "domains", "ads"]
@@ -181,6 +225,13 @@ class Derived(TypedDict):
     is_long_running: Optional[bool]
     language: Optional[str]
     variant_count: Optional[int]
+    signals: Optional[List[str]]
+    """Why this ad likely performs, from public facts only: ``long_running`` (running > 30 days),
+    ``still_running_90d`` (active and running > 90 days), ``scaled`` (3+ variants with the same
+    text), ``wide_reach`` (EU reach >= 100,000), ``multi_country`` (shown in 5+ countries)."""
+    stage: Optional[AdStage]
+    """``testing`` = no signal yet, ``scaling`` = one signal, ``proven`` = two or more. ``None``
+    when the run length is unknown."""
 
 
 class _AdOpt(TypedDict, total=False):
@@ -199,6 +250,9 @@ class Ad(_AdOpt):
     last_shown: Optional[str]
     first_seen_by_us: Optional[str]
     last_seen_by_us: Optional[str]
+    removed_from_library_at: Optional[str]
+    """When the platform's library stopped showing this ad (taken down, deleted by the advertiser
+    or past the library's retention). We keep it; ``None`` while the library still has it."""
     formats: Optional[List[str]]
     creatives: Optional[List[Creative]]
     placements: Optional[List[str]]
@@ -261,6 +315,8 @@ class EventOut(_EventOutOpt):
 class _ListMetaOpt(TypedDict, total=False):
     platforms: Optional[List[str]]
     errors: Optional[List[PlatformFailure]]
+    platform_totals: Dict[str, int]
+    """Matching ads per platform as the platform reports them, where it does."""
 
 
 class ListMeta(_ListMetaOpt):
@@ -295,15 +351,135 @@ class Period(TypedDict):
     active_to: Optional[str]
 
 
+class _ReachPointOpt(TypedDict, total=False):
+    reach_by_country: Dict[str, int]
+
+
+class ReachPoint(_ReachPointOpt):
+    day: str
+    reach_total: int
+
+
 class AdHistory(TypedDict):
     ad_id: str
     versions: Optional[List[Version]]
     status_periods: Optional[List[Period]]
     events: Optional[List[EventOut]]
+    reach: Optional[List[ReachPoint]]
+    """EU reach per day (Meta ads delivered in the EU), oldest first."""
 
 
 class AdHistoryResponse(TypedDict):
     data: AdHistory
+
+
+# Creative features (GET /v1/ads/{id}/features). Rule-based and measured, no AI model.
+
+
+class FeatureMatch(TypedDict):
+    """A text tag with the exact text it matched."""
+
+    rule: str
+    text: str
+
+
+class TextFeatures(TypedDict):
+    hook: str
+    """First sentence of the primary text."""
+    hook_is_question: bool
+    chars: int
+    words: int
+    emojis: int
+    uppercase_ratio: float
+    hashtags: Optional[List[str]]
+    mentions: Optional[List[str]]
+    numbers: Optional[List[str]]
+    prices: Optional[List[str]]
+    discounts: Optional[List[str]]
+    free_shipping: Optional[List[FeatureMatch]]
+    urgency: Optional[List[FeatureMatch]]
+    social_proof: Optional[List[FeatureMatch]]
+    guarantee: Optional[List[FeatureMatch]]
+    free_offer: Optional[List[FeatureMatch]]
+    novelty: Optional[List[FeatureMatch]]
+
+
+class OCRResult(TypedDict):
+    text: str
+    """Text read on the image (for videos: on the first frame and at 3 s)."""
+    confidence: float
+    """Mean word confidence 0..1; below 0.6 the text is dropped."""
+    languages: str
+
+
+class _MediaFeaturesOpt(TypedDict, total=False):
+    width: int
+    height: int
+    aspect: str
+    """9:16, 4:5, 1:1, 16:9 or WxH reduced."""
+    orientation: Literal["vertical", "square", "horizontal"]
+    duration_s: float
+    has_audio: bool
+    scene_cuts: int
+    """Hard cuts detected (ffmpeg scene score > 0.4)."""
+    cuts_per_minute: float
+    ocr: OCRResult
+    error: str
+
+
+class MediaFeatures(_MediaFeaturesOpt):
+    kind: Literal["image", "video"]
+    url: str
+
+
+class LandingFeatures(TypedDict):
+    url: str
+    domain: str
+    path: str
+    utm: Dict[str, str]
+
+
+class _AdFeaturesOpt(TypedDict, total=False):
+    headline: str
+    cta: str
+    landing: LandingFeatures
+    ocr_text: str
+
+
+class AdFeatures(_AdFeaturesOpt):
+    version: str
+    method: str
+    """``rules`` = text rules with evidence, ``measurement`` = ffprobe/ffmpeg, ``ocr`` = tesseract."""
+    format: str
+    """From the measured media: vertical_video, horizontal_video, square_video, vertical_image,
+    square_image, horizontal_image, carousel, text_only."""
+    text: TextFeatures
+    media: Optional[List[MediaFeatures]]
+
+
+class AdFeaturesMeta(TypedDict):
+    ad_id: str
+    cached: bool
+    """Served from an earlier analysis of the same ad version."""
+    analyzed_at: str
+
+
+class AdFeaturesResponse(TypedDict):
+    data: AdFeatures
+    meta: AdFeaturesMeta
+
+
+class LibraryUrl(TypedDict):
+    kind: Literal["ad", "advertiser"]
+    platform: str
+    id: str
+    """``<platform>:<id>``, usable in every endpoint."""
+    href: str
+    """The AdLib call that fetches it, e.g. ``/v1/ads/meta:1187430977361020``."""
+
+
+class LibraryUrlResponse(TypedDict):
+    data: LibraryUrl
 
 
 class _ResolveDataOpt(TypedDict, total=False):
@@ -397,8 +573,22 @@ class CompanyPlatform(TypedDict):
     active_ads: int
 
 
+class FamilyBrand(TypedDict):
+    name: str
+    domain: str
+
+
+class CompanyFamily(TypedDict):
+    """The parent company and its other brands, when known (reviewed by us)."""
+
+    parent: str
+    parent_domain: Optional[str]
+    brands: Optional[List[FamilyBrand]]
+
+
 class _CompanyOpt(TypedDict, total=False):
     errors: Optional[List[PlatformFailure]]
+    family: CompanyFamily
 
 
 class Company(_CompanyOpt):
@@ -441,11 +631,28 @@ class DomainCheck(TypedDict):
     domain: str
     advertising: Optional[bool]
     platforms: Optional[List[PlatformCheck]]
+    columns: Dict[str, Any]
+    """Flat view for Clay, Sheets or Zapier: ``advertising``, ``platforms_advertising``
+    (comma-separated), ``total_active_ads``, ``latest_ad_at``, and per platform
+    ``<platform>_advertising``, ``<platform>_active_ads`` and ``<platform>_advertiser_id``."""
     checked_at: str
 
 
 class DomainCheckResponse(TypedDict):
     data: DomainCheck
+
+
+class DomainSuggestion(TypedDict):
+    domain: str
+    name: str
+    """Most common advertiser name for the domain."""
+    platforms: Optional[List[str]]
+    advertisers: int
+    ads_known: int
+
+
+class DomainSuggestionsResponse(TypedDict):
+    data: Optional[List[DomainSuggestion]]
 
 
 class BatchOptions(TypedDict, total=False):
@@ -509,6 +716,8 @@ class Watchlist(TypedDict):
     webhook_url: Optional[str]
     interval_hours: int
     archive_videos: bool
+    email_alerts: bool
+    """A digest of each crawl's changes goes to the account's email."""
     created_at: str
     advertiser_count: int
     advertisers: Optional[List[WatchlistEntry]]
@@ -586,6 +795,8 @@ class Plan(TypedDict):
     history_access: bool
     history_days: int
     """How far back archived ads are available; 0 = unlimited."""
+    min_interval_hours: int
+    """Shortest watchlist crawl interval of the plan."""
 
 
 class UsageResponse(TypedDict):
@@ -678,11 +889,44 @@ class PlatformsResponse(TypedDict):
     data: Optional[List[PlatformInfo]]
 
 
+class CoveragePlatform(TypedDict):
+    platform: str
+    ads: int
+    active_ads: int
+    new_7d: int
+
+
+class Coverage(TypedDict):
+    ads: int
+    """Ads in the archive."""
+    active_ads: int
+    ad_versions: int
+    """Creative versions kept (every change is a version)."""
+    media: int
+    """Images and videos stored permanently."""
+    advertisers: int
+    tracked_advertisers: int
+    """Advertisers we crawl on a schedule."""
+    tracked_domains: int
+    removed_kept: int
+    """Ads the platforms' libraries no longer show that we keep."""
+    eu_reach_points: int
+    crawled_24h: int
+    last_crawl: Optional[str]
+    platforms: Optional[List[CoveragePlatform]]
+    updated_at: str
+
+
+class CoverageResponse(TypedDict):
+    data: Coverage
+
+
 class _ChangeSummary(TypedDict):
     new: int
     started: int
     stopped: int
     changed: int
+    removed: int
 
 
 class AdvertiserChangesEvent(TypedDict):
@@ -697,6 +941,8 @@ class AdvertiserChangesEvent(TypedDict):
     started: List[EventOut]
     stopped: List[EventOut]
     changed: List[EventOut]
+    removed: List[EventOut]
+    """Ads the platform's library no longer shows (we keep them)."""
 
 
 class BatchCompletedEvent(TypedDict):

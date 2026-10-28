@@ -1,6 +1,6 @@
 """Official Python client for the AdLib API: one REST API for the public ad libraries of Meta
-(Facebook/Instagram), Google, TikTok, LinkedIn, Pinterest and X, with ad history, watchlists and
-webhooks.
+(Facebook/Instagram), Google, TikTok, LinkedIn, Pinterest, X, Snapchat, Apple, Amazon and Microsoft,
+with ad history, creative features, watchlists and webhooks.
 
     from adlib import AdLib
 
