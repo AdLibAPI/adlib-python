@@ -102,6 +102,23 @@ def test_ad_features() -> None:
         client.ads.features("1187430977361020")
 
 
+def test_ad_features_waits_while_processing() -> None:
+    processing = {"data": None, "meta": {"ad_id": "tiktok:1", "status": "processing", "retry_after": 20, "cached": False}}
+    ready = {"data": {"format": "vertical_video", "media": []}, "meta": {"ad_id": "tiktok:1", "status": "ready", "cached": True}}
+    api = MockAPI(json_response(processing, 202, {"Retry-After": "20"}), json_response(processing, 202), json_response(ready))
+    res = api.client().ads.features("tiktok:1")
+    assert len(api.requests) == 3 and api.sleeps == [20.0, 20.0]
+    assert res["meta"]["status"] == "ready" and res["data"] is not None
+
+    once = MockAPI(json_response(processing, 202))
+    assert once.client().ads.features("tiktok:1", wait=False)["meta"]["status"] == "processing"
+    assert len(once.requests) == 1
+
+    capped = MockAPI(json_response(processing, 202))
+    assert capped.client().ads.features("tiktok:1", max_wait=30)["meta"]["status"] == "processing"
+    assert len(capped.requests) == 2 and capped.sleeps == [20.0]
+
+
 def test_library_url_and_coverage(api: MockAPI) -> None:
     client = api.client()
     link = "https://www.facebook.com/ads/library/?id=1187430977361020"

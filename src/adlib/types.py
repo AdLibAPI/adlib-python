@@ -467,15 +467,23 @@ class AdFeatures(_AdFeaturesOpt):
     media: Optional[List[MediaFeatures]]
 
 
-class AdFeaturesMeta(TypedDict):
-    ad_id: str
-    cached: bool
-    """Served from an earlier analysis of the same ad version."""
+class _AdFeaturesMetaOptional(TypedDict, total=False):
+    retry_after: int
+    """Seconds to wait before asking again (processing only)."""
     analyzed_at: str
 
 
+class AdFeaturesMeta(_AdFeaturesMetaOptional):
+    ad_id: str
+    status: Literal["ready", "processing"]
+    """``processing``: the media are still being analysed (HTTP 202, not billed)."""
+    cached: bool
+    """Served from an earlier analysis of the same ad version."""
+
+
 class AdFeaturesResponse(TypedDict):
-    data: AdFeatures
+    data: Optional[AdFeatures]
+    """None while ``meta.status`` is ``processing``."""
     meta: AdFeaturesMeta
 
 

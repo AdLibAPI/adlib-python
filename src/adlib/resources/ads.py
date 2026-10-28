@@ -18,6 +18,14 @@ from ..types import (
 )
 from ._base import AsyncResource, SyncResource
 
+
+def _retry_in(res: AdFeaturesResponse) -> Optional[float]:
+    """Seconds to wait before asking again while the media are still analysed, else None."""
+    meta = res.get("meta") or {}
+    if meta.get("status") != "processing":
+        return None
+    return float(max(1, meta.get("retry_after") or 10))
+
 __all__ = ["Ads", "AsyncAds"]
 
 
@@ -139,12 +147,25 @@ class Ads(SyncResource):
         """All observed versions, status periods, events and daily EU reach of an ad."""
         return cast(AdHistoryResponse, self._request(E.ad_history(id)))
 
-    def features(self, id: str) -> AdFeaturesResponse:
+    def features(self, id: str, *, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
-        cuts and on-image text. Every text tag carries the
-        text it matched. Kept per ad version. Costs the features price (default 2 credits), plus
-        the ad itself if it has to be fetched live."""
-        return cast(AdFeaturesResponse, self._request(E.ad_features(id)))
+        cuts and on-image text. Every text tag carries the text it matched. Kept per ad version.
+        Costs the features price (default 2 credits) when the data is delivered, plus the ad
+        itself if it has to be fetched live.
+
+        A new analysis of video ads can take a while: the API then answers 202 with
+        ``meta.status == "processing"`` (free). With ``wait=True`` (default) this asks again after
+        ``retry_after`` seconds until the data is ready, for up to ``max_wait`` seconds, then
+        returns the ``processing`` answer. ``wait=False`` returns the first answer as it is."""
+        request = E.ad_features(id)
+        waited = 0.0
+        while True:
+            res = cast(AdFeaturesResponse, self._request(request))
+            delay = _retry_in(res)
+            if not wait or delay is None or waited + delay > max_wait:
+                return res
+            self._client._sleep(delay)
+            waited += delay
 
 
 class AsyncAds(AsyncResource):
@@ -265,9 +286,22 @@ class AsyncAds(AsyncResource):
         """All observed versions, status periods, events and daily EU reach of an ad."""
         return cast(AdHistoryResponse, await self._request(E.ad_history(id)))
 
-    async def features(self, id: str) -> AdFeaturesResponse:
+    async def features(self, id: str, *, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
-        cuts and on-image text. Every text tag carries the
-        text it matched. Kept per ad version. Costs the features price (default 2 credits), plus
-        the ad itself if it has to be fetched live."""
-        return cast(AdFeaturesResponse, await self._request(E.ad_features(id)))
+        cuts and on-image text. Every text tag carries the text it matched. Kept per ad version.
+        Costs the features price (default 2 credits) when the data is delivered, plus the ad
+        itself if it has to be fetched live.
+
+        A new analysis of video ads can take a while: the API then answers 202 with
+        ``meta.status == "processing"`` (free). With ``wait=True`` (default) this asks again after
+        ``retry_after`` seconds until the data is ready, for up to ``max_wait`` seconds, then
+        returns the ``processing`` answer. ``wait=False`` returns the first answer as it is."""
+        request = E.ad_features(id)
+        waited = 0.0
+        while True:
+            res = cast(AdFeaturesResponse, await self._request(request))
+            delay = _retry_in(res)
+            if not wait or delay is None or waited + delay > max_wait:
+                return res
+            await self._client._sleep(delay)
+            waited += delay
