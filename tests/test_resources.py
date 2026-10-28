@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Dict
+from typing import Dict, Optional
 
 import httpx
 
@@ -397,3 +397,75 @@ async def test_async_endpoints(api: MockAPI) -> None:
         "GET /v1/domains/nike.com/check",
     ]
     assert calls(api)[13] == "POST /v1/batch"
+
+
+def csv_response(text: str, headers: Optional[dict] = None) -> httpx.Response:
+    return httpx.Response(
+        200, content=text.encode(), headers={"content-type": "text/csv; charset=utf-8", **(headers or {})}
+    )
+
+
+def test_ids_accept_every_platform_prefix(api: MockAPI) -> None:
+    client = api.client()
+    for p in PLATFORMS:
+        client.ads.get(f"{p}:123")
+    assert api.last.url.path == "/v1/ads/microsoft:123"
+    assert len(api.requests) == 10
+    with pytest.raises(ValueError, match="must look like <platform>:<id>"):
+        client.ads.get("youtube:123")
+    with pytest.raises(ValueError, match="platform one of meta, google"):
+        client.advertisers.stats("facebook:1")
+
+
+def test_search_csv(api: MockAPI) -> None:
+    api.replies = [csv_response("id,platform\nmeta:1,meta\n", {"x-next-cursor": "c2"})]
+    client = api.client()
+    page = client.ads.search_csv(q="shoes", platform=["meta", "youtube"], limit=50)
+    assert page == {"csv": "id,platform\nmeta:1,meta\n", "next_cursor": "c2"}
+    assert api.last.url.path == "/v1/search"
+    assert params(api.last) == {"q": "shoes", "platform": "meta,youtube", "limit": "50", "output": "csv"}
+    assert api.last.headers["accept"] == "text/csv"
+
+
+def test_csv_endpoints(api: MockAPI) -> None:
+    api.replies = [csv_response("id\n")]
+    client = api.client()
+    assert client.advertisers.ads_csv("meta:1", source="history") == {"csv": "id\n", "next_cursor": None}
+    client.advertisers.changes_csv("meta:1", since="2026-10-01", types=["removed"])
+    client.advertisers.timeline_csv("meta:1", date_from="2026-01-01")
+    client.domains.check_csv("nike.com")
+    client.request_csv("/v1/watchlists")
+    assert [str(r.url).split("adlibapi.com")[1] for r in api.requests] == [
+        "/v1/advertisers/meta:1/ads?source=history&output=csv",
+        "/v1/advertisers/meta:1/changes?since=2026-10-01&types=removed&output=csv",
+        "/v1/advertisers/meta:1/timeline?from=2026-01-01&output=csv",
+        "/v1/domains/nike.com/check?output=csv",
+        "/v1/watchlists?output=csv",
+    ]
+
+
+def test_csv_errors_stay_json(api: MockAPI) -> None:
+    from adlib import AdLibError, NotFoundError
+
+    from .conftest import api_error
+
+    api.replies = [api_error(404, "not_found"), json_response({"data": None})]
+    client = api.client()
+    with pytest.raises(NotFoundError):
+        client.advertisers.ads_csv("meta:1")
+    with pytest.raises(AdLibError, match="Expected a CSV response"):
+        client.domains.check_csv("nike.com")
+
+
+async def test_async_csv(api: MockAPI) -> None:
+    api.replies = [csv_response("id\n", {"x-next-cursor": "n"})]
+    client = api.async_client()
+    assert await client.ads.search_csv(domain="nike.com") == {"csv": "id\n", "next_cursor": "n"}
+    await client.advertisers.ads_csv("meta:1")
+    await client.advertisers.changes_csv("meta:1", since="2026-10-01")
+    await client.advertisers.timeline_csv("meta:1")
+    await client.domains.check_csv("nike.com")
+    await client.request_csv("/v1/usage", params={"days": 7})
+    assert all(r.url.params["output"] == "csv" for r in api.requests)
+    assert api.last.url.path == "/v1/usage"
+    await client.aclose()

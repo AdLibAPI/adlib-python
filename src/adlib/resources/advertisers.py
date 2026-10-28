@@ -5,6 +5,7 @@ from typing import Optional, Sequence, cast
 from .. import _endpoints as E
 from .._endpoints import DateLike, PlatformFilter
 from ..types import (
+    CsvPage,
     AdList,
     AdvertiserResponse,
     AdvertiserStatsResponse,
@@ -75,6 +76,20 @@ class Advertisers(SyncResource):
         ads that vanished from the platform). ``limit`` 1 to 100. Paginated."""
         return cast(AdList, self._request(E.advertiser_ads(id, status, source, sort, cursor, limit)))
 
+    def ads_csv(
+        self,
+        id: str,
+        *,
+        status: Optional[StatusFilter] = None,
+        source: Optional[Source] = None,
+        sort: Optional[Sort] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`ads`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, self._request_csv(E.advertiser_ads(id, status, source, sort, cursor, limit)))
+
     def changes(
         self,
         id: str,
@@ -88,6 +103,19 @@ class Advertisers(SyncResource):
         datetime). ``types`` defaults to started, stopped, changed. ``limit`` 1 to 200.
         Paginated."""
         return cast(EventList, self._request(E.advertiser_changes(id, since, types, cursor, limit)))
+
+    def changes_csv(
+        self,
+        id: str,
+        *,
+        since: DateLike,
+        types: Optional[Sequence[EventType]] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`changes`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, self._request_csv(E.advertiser_changes(id, since, types, cursor, limit)))
 
     def stats(self, id: str) -> AdvertiserStatsResponse:
         """Analytics from the history: ads by status, format, country and language; run-time
@@ -106,6 +134,19 @@ class Advertisers(SyncResource):
         """When which ads started and stopped. ``limit`` 1 to 200. Paginated."""
         return cast(EventList, self._request(E.advertiser_timeline(id, date_from, date_to, cursor, limit)))
 
+
+    def timeline_csv(
+        self,
+        id: str,
+        *,
+        date_from: DateLike = None,
+        date_to: DateLike = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`timeline`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, self._request_csv(E.advertiser_timeline(id, date_from, date_to, cursor, limit)))
 
 class AsyncAdvertisers(AsyncResource):
     """Async version of :class:`Advertisers`."""
@@ -157,6 +198,20 @@ class AsyncAdvertisers(AsyncResource):
         ads that vanished from the platform). ``limit`` 1 to 100. Paginated."""
         return cast(AdList, await self._request(E.advertiser_ads(id, status, source, sort, cursor, limit)))
 
+    async def ads_csv(
+        self,
+        id: str,
+        *,
+        status: Optional[StatusFilter] = None,
+        source: Optional[Source] = None,
+        sort: Optional[Sort] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`ads`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, await self._request_csv(E.advertiser_ads(id, status, source, sort, cursor, limit)))
+
     async def changes(
         self,
         id: str,
@@ -170,6 +225,19 @@ class AsyncAdvertisers(AsyncResource):
         datetime). ``types`` defaults to started, stopped, changed. ``limit`` 1 to 200.
         Paginated."""
         return cast(EventList, await self._request(E.advertiser_changes(id, since, types, cursor, limit)))
+
+    async def changes_csv(
+        self,
+        id: str,
+        *,
+        since: DateLike,
+        types: Optional[Sequence[EventType]] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`changes`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, await self._request_csv(E.advertiser_changes(id, since, types, cursor, limit)))
 
     async def stats(self, id: str) -> AdvertiserStatsResponse:
         """Analytics from the history: ads by status, format, country and language; run-time
@@ -187,3 +255,16 @@ class AsyncAdvertisers(AsyncResource):
     ) -> EventList:
         """When which ads started and stopped. ``limit`` 1 to 200. Paginated."""
         return cast(EventList, await self._request(E.advertiser_timeline(id, date_from, date_to, cursor, limit)))
+
+    async def timeline_csv(
+        self,
+        id: str,
+        *,
+        date_from: DateLike = None,
+        date_to: DateLike = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`timeline`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(CsvPage, await self._request_csv(E.advertiser_timeline(id, date_from, date_to, cursor, limit)))

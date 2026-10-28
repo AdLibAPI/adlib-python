@@ -27,8 +27,9 @@ class Watchlists(SyncResource):
         email_alerts: Optional[bool] = None,
     ) -> WatchlistResponse:
         """Creates a watchlist. ``advertisers`` are ids ``<platform>:<id>`` (find them with
-        ``advertisers.resolve``). ``webhook_url`` receives ``advertiser.changes`` events.
-        ``interval_hours`` 1 to 168 (default 24). ``archive_videos`` keeps full video files
+        ``advertisers.resolve``). ``webhook_url`` receives signed ``advertiser.changes`` events
+        (a Slack or Discord webhook URL gets a readable message instead). ``interval_hours`` 1 to
+        168 (default 24; shortest per plan: Free and Starter 24, Growth 12, Pro 6, Business 1). ``archive_videos`` keeps full video files
         (default true). ``email_alerts`` mails a digest of each crawl's changes (new, stopped,
         changed, removed ads) to your account's email. Not retried on 5xx, so it is never created
         twice."""
@@ -82,8 +83,9 @@ class AsyncWatchlists(AsyncResource):
         email_alerts: Optional[bool] = None,
     ) -> WatchlistResponse:
         """Creates a watchlist. ``advertisers`` are ids ``<platform>:<id>`` (find them with
-        ``advertisers.resolve``). ``webhook_url`` receives ``advertiser.changes`` events.
-        ``interval_hours`` 1 to 168 (default 24). ``archive_videos`` keeps full video files
+        ``advertisers.resolve``). ``webhook_url`` receives signed ``advertiser.changes`` events
+        (a Slack or Discord webhook URL gets a readable message instead). ``interval_hours`` 1 to
+        168 (default 24; shortest per plan: Free and Starter 24, Growth 12, Pro 6, Business 1). ``archive_videos`` keeps full video files
         (default true). ``email_alerts`` mails a digest of each crawl's changes (new, stopped,
         changed, removed ads) to your account's email. Not retried on 5xx, so it is never created
         twice."""

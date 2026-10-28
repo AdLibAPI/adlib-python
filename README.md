@@ -67,7 +67,8 @@ print(features["format"], features["text"]["hook"], features["text"]["urgency"])
 ```
 
 Requests go to `https://api.adlibapi.com` with an `X-API-Key` header. Ids are
-`<platform>:<platform_id>` everywhere, e.g. `meta:15087023444` or `google:AR18378488041124659201`.
+`<platform>:<platform_id>` everywhere, e.g. `meta:15087023444` or `google:AR18378488041124659201`,
+with one of the ten libraries as prefix (YouTube and Google Play ads have `google:` ids).
 
 ### Verify webhooks
 
@@ -119,10 +120,19 @@ asyncio.run(main())
 
 ## Credits
 
-The free plan includes **5,000 credits a month**. Calls are billed in credits per delivered result (the `X-Billing-Credits` response header):
-1 per ad on Meta, TikTok, Pinterest and X, 2 on Google, 3 on LinkedIn, double for archived ads last
-shown more than a year ago. A live search page costs at most 5 ads' worth per platform
-(5 credits on Meta, 10 on Google, 15 on LinkedIn), however many ads it returns.
+The free plan includes **5,000 credits a month**. Calls are billed in credits per delivered result
+(the `X-Billing-Credits` response header):
+
+| Platform                                                              | Credits per ad |
+| --------------------------------------------------------------------- | -------------- |
+| Meta, TikTok, Pinterest, X, Snapchat, Apple, Amazon, Microsoft (beta) | 1              |
+| Google, YouTube, Google Play                                          | 2              |
+| LinkedIn                                                              | 3              |
+
+Archived ads last shown more than a year ago cost double. A live search page costs at most 5 ads'
+worth per platform (5 credits on Meta, 10 on Google, 15 on LinkedIn), however many ads it returns.
+`ads.features(id)` costs 2 credits (plus the ad if it has to be fetched live). `library_url`,
+`domains.suggest`, `advertisers.report_match` and `advertisers.list_reports` are free.
 **Empty results, cached results, platform errors and API errors are free.**
 
 `paginate` and `paginate_items` fetch at most 10 pages unless you raise `max_pages`. To see what each
@@ -272,6 +282,8 @@ result = client.batch.get(job["data"]["job_id"])  # status and paginated items
 client.watchlists.list()               # advertiser_count per watchlist; advertisers is empty here
 client.watchlists.get(watchlist_id)    # incl. the crawl status of each advertiser
 client.watchlists.update(watchlist_id, name="Rivals", webhook_url="", email_alerts=True)  # "" removes the webhook
+# webhook_url may also be a Slack or Discord incoming webhook: those get a readable message
+client.watchlists.update(watchlist_id, webhook_url="https://hooks.slack.com/services/T000/B000/XXXX")
 client.watchlists.add_advertisers(watchlist_id, ["google:AR18378488041124659201"])
 client.watchlists.remove_advertiser(watchlist_id, "google:AR18378488041124659201")
 client.watchlists.delete(watchlist_id)
@@ -299,9 +311,21 @@ client.coverage()       # archive size and freshness (public)
 
 ### CSV
 
-The API answers any `/v1` endpoint as CSV with `output=csv`. The client returns parsed JSON only;
-for CSV, call the API with `httpx` directly (the next page's cursor is in the `X-Next-Cursor`
-header).
+Any `/v1` endpoint answers as CSV with `output=csv`, billed the same as JSON. `data` is flattened:
+one row per item, nested objects as dotted columns (`advertiser.name`), value lists joined with `|`,
+of object lists only the first item (`creatives.0.text`) plus a `creatives_count` column.
+
+```python
+page = client.ads.search_csv(domain="nike.com", source="history")
+print(page["csv"], page["next_cursor"])  # cursor from the X-Next-Cursor header; pass it as cursor=
+client.advertisers.ads_csv("meta:15087023444")
+client.advertisers.changes_csv("meta:15087023444", since="2026-10-01")
+client.advertisers.timeline_csv("meta:15087023444")
+client.domains.check_csv("nike.com")             # one row with the flat columns
+client.request_csv("/v1/watchlists")             # any other GET endpoint
+```
+
+Errors are still raised as typed exceptions. The async client has the same methods.
 
 ### Endpoints not wrapped yet
 

@@ -257,6 +257,23 @@ def process_response(response: httpx.Response) -> Any:
     return body
 
 
+def process_csv_response(response: httpx.Response) -> Dict[str, Any]:
+    """Returns ``{"csv": ..., "next_cursor": ...}`` for an ``output=csv`` call, or raises the
+    matching exception. Errors stay JSON."""
+    if response.status_code >= 400:
+        raise make_status_error(response)
+    if not response.headers.get("content-type", "").startswith("text/csv"):
+        # The API answers JSON when there is nothing to flatten (no ``data``).
+        raise AdLibError(
+            "Expected a CSV response but got something else.",
+            status_code=response.status_code,
+            request_id=response.headers.get("x-request-id"),
+            body=_parse_body(response),
+            response=response,
+        )
+    return {"csv": response.text, "next_cursor": response.headers.get("x-next-cursor") or None}
+
+
 def _header_int(headers: httpx.Headers, name: str) -> Optional[int]:
     raw = headers.get(name)
     if raw is None:

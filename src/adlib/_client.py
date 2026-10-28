@@ -44,6 +44,7 @@ from .types import (
     AdFormat,
     AdList,
     CoverageResponse,
+    CsvPage,
     LibraryUrlResponse,
     Placement,
     PlatformsResponse,
@@ -80,12 +81,14 @@ class _ClientMixin:
             "params": _base.clean_params(request.params),
             "headers": _base.build_headers(self._config),
         }
+        if request.csv:
+            args["headers"]["Accept"] = "text/csv"
         if request.body is not None:
             args["json"] = request.body  # httpx sets Content-Type: application/json
         return args
 
-    def _finish(self, response: httpx.Response) -> Any:
-        body = _base.process_response(response)
+    def _finish(self, response: httpx.Response, csv: bool = False) -> Any:
+        body = _base.process_csv_response(response) if csv else _base.process_response(response)
         if self._on_response is not None:
             self._on_response(_base.response_info(response))
         return body
@@ -171,7 +174,7 @@ class AdLib(_ClientMixin):
                     self._sleep(_base.retry_delay(attempt, retry_after))
                     attempt += 1
                     continue
-            return self._finish(response)
+            return self._finish(response, request.csv)
 
     def request(
         self,
@@ -184,6 +187,11 @@ class AdLib(_ClientMixin):
         """Sends a request to an endpoint this SDK does not wrap yet, with the same auth,
         retries and error handling."""
         return self._send(Request(method.upper(), path, params or {}, json))
+
+    def request_csv(self, path: str, *, params: Optional[Dict[str, Any]] = None) -> CsvPage:
+        """GETs any ``/v1`` endpoint as CSV (``output=csv``), billed like JSON. Returns
+        ``{"csv": ..., "next_cursor": ...}`` with the cursor from the X-Next-Cursor header."""
+        return cast(CsvPage, self._send(E.as_csv(Request("GET", path, params or {}))))
 
     # --- top-level endpoints -------------------------------------------------
 
@@ -377,7 +385,7 @@ class AsyncAdLib(_ClientMixin):
                     await self._sleep(_base.retry_delay(attempt, retry_after))
                     attempt += 1
                     continue
-            return self._finish(response)
+            return self._finish(response, request.csv)
 
     async def request(
         self,
@@ -389,6 +397,11 @@ class AsyncAdLib(_ClientMixin):
     ) -> Any:
         """Sends a request to an endpoint this SDK does not wrap yet."""
         return await self._send(Request(method.upper(), path, params or {}, json))
+
+    async def request_csv(self, path: str, *, params: Optional[Dict[str, Any]] = None) -> CsvPage:
+        """GETs any ``/v1`` endpoint as CSV (``output=csv``), billed like JSON. Returns
+        ``{"csv": ..., "next_cursor": ...}`` with the cursor from the X-Next-Cursor header."""
+        return cast(CsvPage, await self._send(E.as_csv(Request("GET", path, params or {}))))
 
     async def search(
         self,

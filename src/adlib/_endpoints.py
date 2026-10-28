@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Union
 from urllib.parse import quote
 
 from ._base import QueryValue
+from .types import PLATFORMS
 
 
-__all__ = ["Request", "PlatformFilter", "DateLike"]
+__all__ = ["Request", "PlatformFilter", "DateLike", "as_csv"]
 
 PlatformFilter = Union[str, Sequence[str], None]
 DateLike = Union[str, _dt.date, _dt.datetime, None]
@@ -35,10 +36,17 @@ class Request:
     path: str
     params: Mapping[str, Optional[QueryValue]] = field(default_factory=dict)
     body: Optional[Dict[str, Any]] = None
+    #: Ask for CSV (``output=csv``) instead of JSON.
+    csv: bool = False
 
     @property
     def idempotent(self) -> bool:
         return self.method != "POST"  # GET, PATCH and DELETE are safe to repeat
+
+
+def as_csv(request: Request) -> Request:
+    """The same request, answered as CSV (``output=csv``)."""
+    return replace(request, params={**request.params, "output": "csv"}, csv=True)
 
 
 # ---------------------------------------------------------------------------
@@ -59,13 +67,17 @@ def _non_empty(name: str, value: Any) -> str:
     return value.strip()
 
 
-_PREFIXED_ID = re.compile(r"^[a-z]+:\S.*$")
+# Ids use the ten libraries (YouTube and Play ads are google: ids).
+_PREFIXED_ID = re.compile(rf"^({'|'.join(PLATFORMS)}):\S.*$")
 
 
 def _prefixed_id(name: str, value: Any) -> str:
     s = _non_empty(name, value)
     if not _PREFIXED_ID.match(s):
-        raise ValueError(f"{name} must look like <platform>:<id>, e.g. meta:1234567890 (got {s!r})")
+        raise ValueError(
+            f"{name} must look like <platform>:<id>, e.g. meta:1234567890, with platform one of "
+            f"{', '.join(PLATFORMS)} (got {s!r})"
+        )
     return s
 
 

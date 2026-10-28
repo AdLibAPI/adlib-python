@@ -5,6 +5,7 @@ from typing import Optional, cast
 from .. import _endpoints as E
 from .._endpoints import DateLike, PlatformFilter
 from ..types import (
+    CsvPage,
     AdFeaturesResponse,
     AdFormat,
     AdHistoryResponse,
@@ -60,6 +61,52 @@ class Ads(SyncResource):
         return cast(
             AdList,
             self._request(
+                E.search(
+                    q=q,
+                    advertiser=advertiser,
+                    domain=domain,
+                    platform=platform,
+                    country=country,
+                    status=status,
+                    date_from=date_from,
+                    date_to=date_to,
+                    format=format,
+                    placement=placement,
+                    political=political,
+                    removed=removed,
+                    source=source,
+                    sort=sort,
+                    cursor=cursor,
+                    limit=limit,
+                )
+            ),
+        )
+
+    def search_csv(
+        self,
+        *,
+        q: Optional[str] = None,
+        advertiser: Optional[str] = None,
+        domain: Optional[str] = None,
+        platform: PlatformFilter = None,
+        country: Optional[str] = None,
+        status: Optional[StatusFilter] = None,
+        date_from: DateLike = None,
+        date_to: DateLike = None,
+        format: Optional[AdFormat] = None,
+        placement: Optional[Placement] = None,
+        political: Optional[bool] = None,
+        removed: Optional[bool] = None,
+        source: Optional[Source] = None,
+        sort: Optional[Sort] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`search`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(
+            CsvPage,
+            self._request_csv(
                 E.search(
                     q=q,
                     advertiser=advertiser,
@@ -140,6 +187,52 @@ class AsyncAds(AsyncResource):
         return cast(
             AdList,
             await self._request(
+                E.search(
+                    q=q,
+                    advertiser=advertiser,
+                    domain=domain,
+                    platform=platform,
+                    country=country,
+                    status=status,
+                    date_from=date_from,
+                    date_to=date_to,
+                    format=format,
+                    placement=placement,
+                    political=political,
+                    removed=removed,
+                    source=source,
+                    sort=sort,
+                    cursor=cursor,
+                    limit=limit,
+                )
+            ),
+        )
+
+    async def search_csv(
+        self,
+        *,
+        q: Optional[str] = None,
+        advertiser: Optional[str] = None,
+        domain: Optional[str] = None,
+        platform: PlatformFilter = None,
+        country: Optional[str] = None,
+        status: Optional[StatusFilter] = None,
+        date_from: DateLike = None,
+        date_to: DateLike = None,
+        format: Optional[AdFormat] = None,
+        placement: Optional[Placement] = None,
+        political: Optional[bool] = None,
+        removed: Optional[bool] = None,
+        source: Optional[Source] = None,
+        sort: Optional[Sort] = None,
+        cursor: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> CsvPage:
+        """Like :meth:`search`, as CSV (``output=csv``): ``{"csv": ..., "next_cursor": ...}``
+        with the cursor of the next page from the X-Next-Cursor header. Billed like JSON."""
+        return cast(
+            CsvPage,
+            await self._request_csv(
                 E.search(
                     q=q,
                     advertiser=advertiser,

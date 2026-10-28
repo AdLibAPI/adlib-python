@@ -42,6 +42,7 @@ __all__ = [
     "AdFeaturesResponse",
     "LibraryUrl",
     "LibraryUrlResponse",
+    "CsvPage",
     "ReachPoint",
     "FamilyBrand",
     "CompanyFamily",
@@ -323,6 +324,15 @@ class ListMeta(_ListMetaOpt):
     count: int
     cached: bool
     source: Source
+
+
+class CsvPage(TypedDict):
+    """A page as CSV (``output=csv``)."""
+
+    #: Header row plus one row per item of ``data`` (an object becomes one row).
+    csv: str
+    #: From the X-Next-Cursor header; pass it back as ``cursor``. None on the last page.
+    next_cursor: Optional[str]
 
 
 class AdList(TypedDict):

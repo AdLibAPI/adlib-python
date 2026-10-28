@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .._endpoints import Request
+from .._endpoints import Request, as_csv
 
 if TYPE_CHECKING:
     from .._client import AdLib, AsyncAdLib
@@ -15,6 +15,9 @@ class SyncResource:
     def _request(self, request: Request) -> Any:
         return self._client._send(request)
 
+    def _request_csv(self, request: Request) -> Any:
+        return self._client._send(as_csv(request))
+
 
 class AsyncResource:
     def __init__(self, client: "AsyncAdLib") -> None:
@@ -22,3 +25,6 @@ class AsyncResource:
 
     async def _request(self, request: Request) -> Any:
         return await self._client._send(request)
+
+    async def _request_csv(self, request: Request) -> Any:
+        return await self._client._send(as_csv(request))
