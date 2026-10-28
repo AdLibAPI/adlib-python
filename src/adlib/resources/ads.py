@@ -141,7 +141,7 @@ class Ads(SyncResource):
 
     def features(self, id: str) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
-        cuts and on-image text. Rule-based and measured, no AI model: every text tag carries the
+        cuts and on-image text. Every text tag carries the
         text it matched. Kept per ad version. Costs the features price (default 2 credits), plus
         the ad itself if it has to be fetched live."""
         return cast(AdFeaturesResponse, self._request(E.ad_features(id)))
@@ -267,7 +267,7 @@ class AsyncAds(AsyncResource):
 
     async def features(self, id: str) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
-        cuts and on-image text. Rule-based and measured, no AI model: every text tag carries the
+        cuts and on-image text. Every text tag carries the
         text it matched. Kept per ad version. Costs the features price (default 2 credits), plus
         the ad itself if it has to be fetched live."""
         return cast(AdFeaturesResponse, await self._request(E.ad_features(id)))

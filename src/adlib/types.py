@@ -383,7 +383,7 @@ class AdHistoryResponse(TypedDict):
     data: AdHistory
 
 
-# Creative features (GET /v1/ads/{id}/features). Rule-based and measured, no AI model.
+# Creative features (GET /v1/ads/{id}/features). Every tag carries the text it matched.
 
 
 class FeatureMatch(TypedDict):
