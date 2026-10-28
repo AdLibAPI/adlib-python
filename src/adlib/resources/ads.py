@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import Optional, Sequence, cast
 
 from .. import _endpoints as E
 from .._endpoints import DateLike, PlatformFilter
@@ -147,17 +147,21 @@ class Ads(SyncResource):
         """All observed versions, status periods, events and daily EU reach of an ad."""
         return cast(AdHistoryResponse, self._request(E.ad_history(id)))
 
-    def features(self, id: str, *, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
+    def features(self, id: str, *, include: Optional[Sequence[str]] = None, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
         cuts and on-image text. Every text tag carries the text it matched. Kept per ad version.
         Costs the features price (default 2 credits) when the data is delivered, plus the ad
         itself if it has to be fetched live.
 
+        ``include=["transcript", "ai"]`` adds what is said in the videos with timestamps (+10
+        credits per started minute) and an AI read of hook type, angles, emotions, audience and
+        style (+5 credits).
+
         A new analysis of video ads can take a while: the API then answers 202 with
         ``meta.status == "processing"`` (free). With ``wait=True`` (default) this asks again after
         ``retry_after`` seconds until the data is ready, for up to ``max_wait`` seconds, then
         returns the ``processing`` answer. ``wait=False`` returns the first answer as it is."""
-        request = E.ad_features(id)
+        request = E.ad_features(id, include)
         waited = 0.0
         while True:
             res = cast(AdFeaturesResponse, self._request(request))
@@ -286,17 +290,21 @@ class AsyncAds(AsyncResource):
         """All observed versions, status periods, events and daily EU reach of an ad."""
         return cast(AdHistoryResponse, await self._request(E.ad_history(id)))
 
-    async def features(self, id: str, *, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
+    async def features(self, id: str, *, include: Optional[Sequence[str]] = None, wait: bool = True, max_wait: float = 120.0) -> AdFeaturesResponse:
         """Creative features of an ad: hook, offers, urgency, social proof, format, video length,
         cuts and on-image text. Every text tag carries the text it matched. Kept per ad version.
         Costs the features price (default 2 credits) when the data is delivered, plus the ad
         itself if it has to be fetched live.
 
+        ``include=["transcript", "ai"]`` adds what is said in the videos with timestamps (+10
+        credits per started minute) and an AI read of hook type, angles, emotions, audience and
+        style (+5 credits).
+
         A new analysis of video ads can take a while: the API then answers 202 with
         ``meta.status == "processing"`` (free). With ``wait=True`` (default) this asks again after
         ``retry_after`` seconds until the data is ready, for up to ``max_wait`` seconds, then
         returns the ``processing`` answer. ``wait=False`` returns the first answer as it is."""
-        request = E.ad_features(id)
+        request = E.ad_features(id, include)
         waited = 0.0
         while True:
             res = cast(AdFeaturesResponse, await self._request(request))

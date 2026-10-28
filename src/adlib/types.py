@@ -36,6 +36,10 @@ __all__ = [
     "TextFeatures",
     "OCRResult",
     "OCRSpan",
+    "TimedText",
+    "MediaTranscript",
+    "AdTranscript",
+    "AdAIRead",
     "MediaFeatures",
     "LandingFeatures",
     "AdFeatures",
@@ -482,6 +486,11 @@ class AdFeatures(_AdFeaturesOpt):
 
 
 class _AdFeaturesMetaOptional(TypedDict, total=False):
+    pending: str
+    included: List[str]
+    credits: Dict[str, int]
+    """Credits by part: features, transcript, ai."""
+    errors: Dict[str, str]
     retry_after: int
     """Seconds to wait before asking again (processing only)."""
     analyzed_at: str
@@ -495,8 +504,47 @@ class AdFeaturesMeta(_AdFeaturesMetaOptional):
     """Served from an earlier analysis of the same ad version."""
 
 
+class TimedText(TypedDict):
+    start: float
+    end: float
+    text: str
+
+
+class _MediaTranscriptOptional(TypedDict, total=False):
+    language: str
+    error: str
+
+
+class MediaTranscript(_MediaTranscriptOptional):
+    url: str
+    duration_s: float
+    text: str
+    segments: List[TimedText]
+
+
+class AdTranscript(TypedDict):
+    media: List[MediaTranscript]
+
+
+class AdAIRead(TypedDict):
+    summary: str
+    hook: str
+    """The opening words as the viewer meets them, in the ad's language."""
+    hook_type: str
+    angles: List[str]
+    emotions: List[str]
+    audience: str
+    style: str
+    cta: str
+    offer: str
+    language: str
+    model: str
+    with_transcript: bool
+
+
 class AdFeaturesResponse(TypedDict):
     data: Optional[AdFeatures]
+    """With ``include``: also ``transcript`` (:class:`AdTranscript`) and ``ai`` (:class:`AdAIRead`)."""
     """None while ``meta.status`` is ``processing``."""
     meta: AdFeaturesMeta
 

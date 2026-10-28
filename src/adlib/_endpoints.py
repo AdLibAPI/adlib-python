@@ -203,8 +203,19 @@ def ad_history(id: str) -> Request:
     return Request("GET", f"/v1/ads/{_seg(_prefixed_id('id', id))}/history")
 
 
-def ad_features(id: str) -> Request:
-    return Request("GET", f"/v1/ads/{_seg(_prefixed_id('id', id))}/features")
+FEATURE_INCLUDES = ("transcript", "ai")
+
+
+def ad_features(id: str, include: Optional[Sequence[str]] = None) -> Request:
+    path = f"/v1/ads/{_seg(_prefixed_id('id', id))}/features"
+    if not include:
+        return Request("GET", path)
+    if isinstance(include, str):
+        include = [p.strip() for p in include.split(",")]
+    bad = [p for p in include if p not in FEATURE_INCLUDES]
+    if bad:
+        raise ValueError(f"include: unknown part {bad[0]!r}; use 'transcript', 'ai' or both")
+    return Request("GET", path, {"include": ",".join(dict.fromkeys(include))})
 
 
 def library_url(url: str) -> Request:

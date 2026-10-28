@@ -102,6 +102,15 @@ def test_ad_features() -> None:
         client.ads.features("1187430977361020")
 
 
+def test_ad_features_include() -> None:
+    ready = {"data": {"format": "vertical_video", "media": []}, "meta": {"ad_id": "tiktok:1", "status": "ready", "cached": False}}
+    api = MockAPI(json_response(ready))
+    api.client().ads.features("tiktok:1", include=["transcript", "ai"])
+    assert params(api.last) == {"include": "transcript,ai"}
+    with pytest.raises(ValueError, match="unknown part"):
+        api.client().ads.features("tiktok:1", include=["spend"])
+
+
 def test_ad_features_waits_while_processing() -> None:
     processing = {"data": None, "meta": {"ad_id": "tiktok:1", "status": "processing", "retry_after": 20, "cached": False}}
     ready = {"data": {"format": "vertical_video", "media": []}, "meta": {"ad_id": "tiktok:1", "status": "ready", "cached": True}}
