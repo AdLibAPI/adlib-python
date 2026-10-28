@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://adlibapi.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://adlibapi.com/brand/wordmark-dark.png">
+      <img alt="AdLib" src="https://adlibapi.com/brand/wordmark.png" width="260">
+    </picture>
+  </a>
+</p>
+
 # adlib-api – Ad library API client for Python
 
 [![PyPI](https://img.shields.io/pypi/v/adlib-api.svg)](https://pypi.org/project/adlib-api/) [![Python](https://img.shields.io/pypi/pyversions/adlib-api.svg)](https://pypi.org/project/adlib-api/)
