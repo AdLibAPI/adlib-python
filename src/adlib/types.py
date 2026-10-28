@@ -35,6 +35,7 @@ __all__ = [
     "FeatureMatch",
     "TextFeatures",
     "OCRResult",
+    "OCRSpan",
     "MediaFeatures",
     "LandingFeatures",
     "AdFeatures",
@@ -414,11 +415,24 @@ class TextFeatures(TypedDict):
     novelty: Optional[List[FeatureMatch]]
 
 
-class OCRResult(TypedDict):
+class OCRSpan(TypedDict):
+    start: float
+    """Seconds from the start of the video."""
+    end: float
+    """Seconds; the text is on screen until here."""
     text: str
-    """Text read on the image (for videos: on the first frame and at 3 s)."""
+
+
+class _OCRResultOptional(TypedDict, total=False):
+    timeline: List[OCRSpan]
+    """Videos: when each text is on screen, in order of appearance."""
+
+
+class OCRResult(_OCRResultOptional):
+    text: str
+    """Text on the image; for videos, the distinct on-screen texts across the whole video, one per line."""
     confidence: float
-    """Mean word confidence 0..1; below 0.6 the text is dropped."""
+    """Mean confidence 0..1 of the words kept; words read with less than 0.75 are dropped."""
     languages: str
 
 
@@ -459,7 +473,7 @@ class _AdFeaturesOpt(TypedDict, total=False):
 class AdFeatures(_AdFeaturesOpt):
     version: str
     method: str
-    """``rules`` = text rules with evidence, ``measurement`` = ffprobe/ffmpeg, ``ocr`` = tesseract."""
+    """``rules`` = text tags with evidence, ``measurement`` = measured from the media, ``ocr`` = text read from images and video frames."""
     format: str
     """From the measured media: vertical_video, horizontal_video, square_video, vertical_image,
     square_image, horizontal_image, carousel, text_only."""
